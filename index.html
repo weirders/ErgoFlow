@@ -70,6 +70,13 @@ select{appearance:none;padding-right:30px;background-image:url("data:image/svg+x
 .step>h2 .n{color:var(--muted);font-weight:500}
 .sub{border:1px solid var(--line);border-radius:var(--rads);padding:12px;margin-bottom:10px;background:var(--soft)}
 .sub .row{margin-bottom:8px}
+.step>h2 .grow{flex:1}
+.helpbtn{flex:none;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--accent);font-weight:700;font-size:.9rem;line-height:1;padding:0;align-self:center}
+.helpbtn[aria-expanded=true]{background:var(--accent);border-color:var(--accent);color:#fff}
+.guide{background:var(--accent-soft);border-radius:var(--rads);padding:10px 12px;margin:0 0 14px;font-size:.88rem}
+.glist{margin:0;padding-left:18px}.glist li{margin:0 0 6px}.glist li:last-child{margin:0}
+.gh{margin:16px 0 6px}.gp{margin:0;font-size:.92rem}
+#panel .glist{font-size:.9rem}
 /* eval layout + rail */
 .evalgrid{display:block}
 .rail{position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -6px 20px rgba(19,33,44,.10);padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
@@ -661,7 +668,7 @@ const TRIAGE=[
 function defaults(m){ const o={}; const walk=fs=>fs.forEach(f=>{ if(f.t==='list'){ const it={}; f.item.forEach(s=>{ if(s.def!==undefined) it[s.k]=s.def; }); o[f.k]=[it]; } else if(f.def!==undefined) o[f.k]=f.def; }); m.steps.forEach(s=>walk(s.fields)); return o; }
 
 /* ===================== ErgoFlow app ===================== */
-const VERSION='0.1.0';
+const VERSION='0.2.0';
 let LANG=(()=>{try{return localStorage.getItem('ergoflow.lang')}catch(e){return null}})()||'nl';
 const T=(nl,en)=>LANG==='nl'?nl:en, tr=x=>Array.isArray(x)?x[LANG==='nl'?0:1]:(x??'');
 tr_=T;
@@ -671,7 +678,7 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const today=()=>new Date().toISOString().slice(0,10);
 const fmtN=n=>n===Infinity?'∞':(n===null||n===undefined||n==='')?'–':String(n).replace(/\./g,LANG==='nl'?',':'.');
 const fmtD=d=>{ if(!d)return ''; const [y,m,dd]=d.split('-'); return dd+'-'+m+'-'+y; };
-const ICON={back:'<path d="M15 5l-7 7 7 7"/>',plus:'<path d="M12 5v14M5 12h14"/>',cam:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',print:'<path d="M7 9V4h10v5M7 17H4v-7h16v7h-3M7 14h10v6H7z"/>',dots:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',chev:'<path d="M6 15l6-6 6 6"/>'};
+const ICON={back:'<path d="M15 5l-7 7 7 7"/>',plus:'<path d="M12 5v14M5 12h14"/>',cam:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',print:'<path d="M7 9V4h10v5M7 17H4v-7h16v7h-3M7 14h10v6H7z"/>',dots:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',chev:'<path d="M6 15l6-6 6 6"/>',help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.8.5-1.1 1-1.1 1.8M12 17h.01"/>'};
 const ico=n=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
 
 /* ---- Storage seam. All persistence goes through Store; swap this object for a SfhaSync-backed
@@ -766,6 +773,229 @@ function methodSheet(taskId){ openSheet(`<h2>${T('Kies een methode','Choose a me
 async function createEval(taskId,method,phase='before',inputs,label=''){ const m=M[method], i=inputs?JSON.parse(JSON.stringify(inputs)):defaults(m);
   const e={id:uid(),taskId,method,phase,label,inputs:i,notes:'',created:Date.now(),result:m.calc(i)}; S.evals.push(e); await Store.put('evals',e); touchTask(getTask(taskId)); return e; }
 
+/* ===================== In-app manuals (per method, per step) ===================== */
+const KIM_GEN=[
+  ["Beoordeel één deeltaak tegelijk en ga uit van de normale, meest voorkomende werkwijze. Zeldzame uitschieters tellen niet mee.","Assess one sub-activity at a time and use the normal, most common way of working. Rare deviations do not count."],
+  ["Kijk minstens 10–15 minuten mee, liefst bij meer dan één medewerker, en vraag hen of wat je ziet normaal is.","Observe for at least 10–15 minutes, preferably more than one worker, and ask them whether what you see is normal."]];
+const KIM_ORG=["Werkorganisatie: Goed = het werk wordt vaak afgewisseld met ander soort werk. Beperkt = zelden afwisseling. Ongunstig = vrijwel de hele dag dezelfde belasting, met pieken dicht op elkaar.","Work organisation: Good = the work is often alternated with a different kind of work. Restricted = rarely alternated. Unfavourable = the same load nearly all day, with peaks close together."];
+const KIM_READ=[
+  ["Score = tijdpunten × som van alle andere punten. Onder 20 laag, 20–50 licht verhoogd, 50–100 verhoogd, 100 of meer hoog.","Score = time points × sum of all other points. Below 20 low, 20–50 slightly increased, 50–100 increased, 100 or more high."],
+  ["De balken onder de score laten zien welk onderdeel de meeste punten geeft: daar levert een maatregel het meeste op. Korter of minder vaak werken verlaagt de tijdpunten en dus de hele score.","The bars under the score show which part gives the most points: that is where a measure helps most. Working shorter or less often lowers the time points and so the whole score."],
+  ["De grenzen zijn een hulpmiddel, geen harde norm. Vanaf verhoogd risico zijn maatregelen nodig; bij klachten altijd.","The ranges are an aid, not a hard limit. From increased risk upward measures are needed; with complaints always."]];
+const SOMS=["Soms = het gebeurt wel, maar in een klein deel van de handelingen. Vaak / steeds = in de meeste handelingen.","Occasionally = it happens, but in a small share of the operations. Frequently = in most operations."];
+const SNAP_PREP=[
+  ["Kies het moment dat je beoordeelt: de houding die het vaakst voorkomt, het langst wordt volgehouden, of waarbij de meeste kracht nodig is. Maak zo nodig meerdere beoordelingen.","Choose the moment to assess: the posture that occurs most, is held longest, or needs the most force. Make several assessments if needed."],
+  ["Maak een foto recht van opzij (haaks op de beweging). Open de foto bij deze beoordeling en gebruik Hoek: tik drie punten, bv. schouder – heup – knie voor de romp, of schouder – elleboog – pols voor de onderarm.","Take a photo straight from the side (square to the movement). Open the photo in this assessment and use Angle: tap three points, e.g. shoulder – hip – knee for the trunk, or shoulder – elbow – wrist for the lower arm."],
+  ["Beoordeel één lichaamszijde: de zwaarst belaste.","Assess one side of the body: the most loaded one."]];
+const MAN={
+niosh:{
+  use:["Voor tillen en neerzetten met twee handen, staand, in een vloeiende beweging. Niet voor tillen in zit of geknield, dragen over meer dan een paar stappen, duwen of trekken, of lasten die instabiel zijn (vloeistof, personen).","For lifting and lowering with two hands, standing, in a smooth movement. Not for lifting while seated or kneeling, carrying more than a few steps, pushing or pulling, or unstable loads (liquids, people)."],
+  prep:[["Neem mee: rolmaat, weegschaal (of productgewicht van het etiket) en een teller of stopwatch.","Bring: tape measure, scale (or the product weight from the label) and a counter or stopwatch."],
+    ["Meet bij de medewerker zoals die werkelijk werkt, niet zoals het hoort. Meet bij een paar mensen en neem het gemiddelde.","Measure the worker as they really work, not as it should be done. Measure a few people and take the average."]],
+  steps:[
+   [["Duur: tel alle tijd waarin getild wordt op één dag. Kies ≤ 1 uur alleen als er na het tillen minstens 1,2× zo lang licht werk volgt; ≤ 2 uur als dat minstens 0,3× zo lang is. Twijfel je, kies ≤ 8 uur.","Duration: add up all time spent lifting in a day. Choose ≤ 1 h only if lifting is followed by light work for at least 1.2× as long; ≤ 2 h if at least 0.3× as long. When in doubt, choose ≤ 8 h."],
+    ["Referentiegewicht: laat op 23 kg staan, tenzij je bedrijf een andere afspraak heeft. 23 kg beschermt de meeste mannen en ongeveer driekwart van de vrouwen.","Reference mass: leave at 23 kg unless your company has agreed otherwise. 23 kg protects most men and about three quarters of women."],
+    ["Eenhandig of met twee personen: alleen aanvinken als dat de normale werkwijze is. Bij twee personen vul je straks het gewicht per persoon in (de helft).","One-handed or two persons: tick only if that is the normal way of working. With two persons, enter the weight per person later (half)."]],
+   [["Maak voor elke duidelijk andere tilsituatie een eigen tilhandeling, bv. onderste laag en bovenste laag van een pallet. Elke handeling krijgt zijn eigen frequentie. De app rekent dan de gecombineerde index (CLI) uit.","Create a separate lift for every clearly different situation, e.g. bottom layer and top layer of a pallet. Each lift gets its own frequency. The app then calculates the composite index (CLI)."],
+    ["Gewicht: weeg de last. Wisselt het gewicht, neem dan het zwaarste dat regelmatig voorkomt.","Weight: weigh the load. If it varies, take the heaviest that occurs regularly."],
+    ["Frequentie: tel 15 minuten lang het aantal keer tillen en deel door 15. Tel alleen de periode waarin echt getild wordt.","Frequency: count the lifts for 15 minutes and divide by 15. Count only the period in which lifting really takes place."],
+    ["Horizontale afstand (H): van het midden tussen de enkels tot het midden van de handen, gemeten over de vloer, op het moment van oppakken. Niet vanaf de tenen en niet tot de rand van de doos. Minder dan 25 cm telt als 25; boven 63 cm is de tilsituatie niet aanvaardbaar.","Horizontal distance (H): from the midpoint between the ankles to the midpoint of the hands, measured along the floor, at the moment of pick-up. Not from the toes and not to the edge of the box. Less than 25 cm counts as 25; above 63 cm the lift is not acceptable."],
+    ["Handhoogte (V): van de vloer tot het midden van de handen. Meet bij oppakken en bij neerzetten. 75 cm (heuphoogte) is ideaal.","Hand height (V): from the floor to the middle of the hands. Measure at pick-up and at set-down. 75 cm (hip height) is ideal."],
+    ["Draaihoek: hoeveel graden de last naast het lichaam wordt gepakt of neergezet. Recht voor het lichaam = 0°, recht opzij = 90°. Als de medewerker zijn voeten meedraait is er geen draaiing.","Asymmetry angle: how many degrees to the side of the body the load is picked up or set down. Straight in front = 0°, straight to the side = 90°. If the worker moves the feet along, there is no twisting."],
+    ["Grip: Goed = handvatten of uitsparingen, of een compact voorwerp dat je goed omvat. Redelijk = geen handvatten, maar vingers kunnen er haaks onder. Slecht = groot, glad, slap (zakken), scherpe randen of met handschoenen moeilijk vast te houden.","Coupling: Good = handles or cut-outs, or a compact object you can wrap your hands around. Fair = no handles, but fingers fit under at a right angle. Poor = bulky, slippery, sagging (bags), sharp edges or hard to hold with gloves."],
+    ["Nauwkeurig plaatsen: aanvinken als de last bij het neerzetten precies moet worden gepositioneerd of even vastgehouden (strak stapelen, in een rek schuiven). Meet dan ook H en de draaihoek bij het neerzetten.","Significant control: tick if the load must be positioned precisely or held for a moment at set-down (tight stacking, sliding into a rack). Then also measure H and the angle at set-down."]]],
+  read:[["LI = gewicht ÷ aanbevolen gewichtsgrens (RWL). Tot 1 laag risico, 1–2 verhoogd, boven 2 hoog.","LI = weight ÷ recommended weight limit (RWL). Up to 1 low risk, 1–2 increased, above 2 high."],
+    ["De balken tonen hoeveel elke factor de gewichtsgrens verlaagt. De langste balk is je beste aangrijpingspunt: last dichter bij het lichaam, pakken op heuphoogte, minder vaak, niet draaien.","The bars show how much each factor lowers the weight limit. The longest bar is your best lever: load closer to the body, pick up at hip height, less often, no twisting."],
+    ["Staat er ∞, dan valt een maat buiten de grenzen van de formule (bv. H boven 63 cm of te hoge frequentie): de situatie is niet aanvaardbaar.","If you see ∞, a measurement is outside the limits of the equation (e.g. H above 63 cm or frequency too high): the situation is not acceptable."]],
+  err:[["H meten vanaf de tenen of tot de voorkant van de doos in plaats van tot de handen.","Measuring H from the toes or to the front of the box instead of to the hands."],
+    ["De frequentie middelen over de hele werkdag in plaats van over de periode waarin getild wordt.","Averaging frequency over the whole working day instead of over the period of lifting."],
+    ["Alleen de gemakkelijke laag van de pallet meten. De onderste en bovenste laag bepalen het risico.","Measuring only the easy layer of the pallet. The bottom and top layers determine the risk."]],
+  fig:'niosh'},
+kimlhc:{
+  use:["Voor tillen, vasthouden en dragen van lasten van 3 kg of meer. Sneller dan NIOSH en ook bruikbaar als er gedragen wordt of als je niet precies kunt meten. Niet voor lasten op een kar (KIM-PP) of dragen over meer dan 10 m (dan ook KIM-BM).","For lifting, holding and carrying loads of 3 kg or more. Quicker than NIOSH and also usable when loads are carried or you cannot measure precisely. Not for loads on a cart (KIM-PP) or carrying over more than 10 m (then also KIM-BM)."],
+  prep:KIM_GEN.concat([["Neem mee: weegschaal en teller.","Bring: scale and counter."]]),
+  steps:[
+   [["Aantal handelingen: elke keer oppakken, vasthouden of dragen telt als één. Tel een kwartier en reken om naar de hele dag voor deze deeltaak.","Number of operations: every pick-up, hold or carry counts as one. Count for a quarter of an hour and convert to the whole day for this sub-activity."],
+    ["Uitgevoerd door: kies Vrouwen als (ook) vrouwen dit werk doen. Dan is iedereen beschermd.","Performed by: choose Women if women (also) do this work. Then everyone is protected."],
+    ["Effectief gewicht: wat de medewerker werkelijk draagt. Kantelen van een doos of vat is ongeveer de helft van het gewicht; met twee personen tillen ongeveer 60 % per persoon.","Effective weight: what the worker really carries. Tilting a box or drum is about half the weight; lifting with two persons is about 60 % per person."],
+    ["Hanteren: let op of beide handen gelijk belast worden. Een last die in één hand hangt of scheef gedragen wordt is asymmetrisch.","Handling: check whether both hands are loaded equally. A load hanging in one hand or carried lopsided is asymmetrical."]],
+   [["Kies de houding bij oppakken en bij neerzetten. Rechtop = rug recht, last dicht bij het lichaam tussen heup en borst. Licht gebogen = romp iets voorover, last iets van het lichaam af, handen tot schouderhoogte of half door de knieën. Diep gebogen = ver voorover, handen onder kniehoogte. Gehurkt / geknield.","Choose the posture at pick-up and at set-down. Upright = straight back, load close to the body between hip and chest. Slightly bent = trunk a little forward, load somewhat away from the body, hands up to shoulder height or half squat. Deep bend = far forward, hands below knee height. Squatting / kneeling."],
+    SOMS,
+    ["Ver van het lichaam = de handen zijn duidelijk meer dan een onderarmlengte van de romp af.","Far from the body = the hands are clearly more than a forearm length away from the trunk."]],
+   [["Grip: Beperkt = geen handvatten, meer knijpkracht nodig. Sterk gehinderd = glad, zacht, scherp of nauwelijks vast te pakken.","Grip: Restricted = no handles, more grip force needed. Considerably hindered = slippery, soft, sharp or hardly possible to grip."],
+    ["Ruimte en ondergrond: Beperkt = minder dan 1,5 m² werkruimte, licht ongelijke of vuile vloer. Ongunstig = te laag of erg krap, gladde of erg ongelijke vloer, treden, helling van 5–10°.","Space and floor: Restricted = less than 1.5 m² work area, slightly uneven or dirty floor. Unfavourable = too low or very confined, slippery or very uneven floor, steps, 5–10° inclination."],
+    ["Vasthouden / dragen: kijk hoe lang de last in de handen blijft en hoe ver ermee gelopen wordt.","Holding / carrying: look at how long the load stays in the hands and how far it is carried."],
+    KIM_ORG]],
+  read:KIM_READ,
+  err:[["Het hele productgewicht invullen terwijl de last alleen gekanteld of met twee personen getild wordt.","Entering the full product weight while the load is only tilted or lifted by two persons."],
+    ["De houding beoordelen op het gemakkelijkste moment. Kijk naar oppakken van de onderste laag en neerzetten op de bovenste.","Assessing posture at the easiest moment. Look at picking up from the bottom layer and setting down on the top one."]]},
+kimpp:{
+  use:["Voor het met spierkracht verplaatsen van karren, rolcontainers, palletwagens, kruiwagens, hangbanen en kranen. Geeft zelf een score, zonder krachtmeting. Niet voor het slepen of rollen van lasten zonder hulpmiddel (KIM-BF).","For moving carts, roll containers, pallet trucks, wheelbarrows, overhead conveyors and cranes by muscle power. Gives a score of its own, without force measurement. Not for dragging or rolling loads without a device (KIM-BF)."],
+  prep:KIM_GEN.concat([["Zoek het leeggewicht van de kar op (typeplaatje of leverancier) en tel het gewicht van de lading erbij. Loop de route één keer mee en let op vloer, drempels, hellingen en bochten.","Look up the empty weight of the cart (nameplate or supplier) and add the weight of the load. Walk the route once and watch the floor, sills, slopes and bends."]]),
+  steps:[
+   [["Tijdsmaat: kies Afstand voor transport over een route (afstand per rit × aantal ritten per dag). Kies Duur als er vooral kort gemanoeuvreerd wordt; tel dan de minuten dat er echt geduwd of getrokken wordt.","Time basis: choose Distance for transport along a route (distance per trip × trips per day). Choose Duration if it is mainly short manoeuvring; then add up the minutes of actual pushing or pulling."],
+    ["Transportmiddel: het soort wielen bepaalt de keuze. Alleen zwenkwielen (rolcontainer) stuurt zwaarder dan een kar met twee vaste wielen.","Transport device: the kind of wheels decides. Swivel castors only (roll container) steers harder than a cart with two fixed wheels."],
+    ["Gewicht: kar plus lading. Neem het gewicht dat het meest voorkomt; beoordeel de zwaarste kar zo nodig apart.","Weight: cart plus load. Take the weight that occurs most; assess the heaviest cart separately if needed."],
+    ["Met twee personen: alleen aanvinken als de kar altijd samen in beweging wordt gebracht en verplaatst.","In pairs: tick only if the cart is always started and moved together."]],
+   [["Ondergrond: kies het slechtste stuk dat op elke rit voorkomt, niet het beste.","Driveway: choose the worst stretch that occurs on every trip, not the best."],
+    ["Helling: 2° is ongeveer 4 cm stijging per meter, 5° ongeveer 9 cm per meter. Meet met een waterpas-app of lengte en hoogte van de helling.","Inclination: 2° is about 4 cm rise per metre, 5° about 9 cm per metre. Measure with a level app or the length and height of the slope."]],
+   [["Vink alleen aan wat regelmatig voorkomt. Probeer de kar zelf: komt hij zwaar op gang, trekt hij scheef, lopen de wielen stroef?","Tick only what occurs regularly. Try the cart yourself: is it hard to start, does it pull to one side, are the wheels stiff?"],
+    ["De punten voor omstandigheden en voor eigenschappen van het middel tellen elk tot maximaal 4.","The points for conditions and for device properties each count up to a maximum of 4."]],
+   [["Houding: let op de duwhoogte. Goed is tussen 0,9 en 1,2 m of vrij te kiezen. Eenzijdig trekken met de arm naar achteren en geen zicht over de lading zijn ongunstig.","Posture: look at the push height. Good is between 0.9 and 1.2 m or freely selectable. Pulling on one side with the arm backwards and no view over the load are unfavourable."],
+    KIM_ORG]],
+  read:KIM_READ.concat([["Vul daarnaast DUTCH in als je een gewichtsgrens voor de kar wilt weten.","Also complete DUTCH if you want to know a weight limit for the cart."]]),
+  err:[["Alleen het gewicht van de lading invullen en de kar vergeten.","Entering only the weight of the load and forgetting the cart."],
+    ["De route beoordelen op een rustig moment: obstakels, natte vloer en volle gangpaden tellen mee.","Assessing the route at a quiet moment: obstacles, wet floor and full aisles count."]]},
+kimmho:{
+  use:["Voor repeterend werk met handen en armen op een vaste plek: sorteren, inpakken, snijden, monteren, controleren. Niet voor krachten met het hele lichaam (KIM-BF) of lasten van 3 kg of meer verplaatsen (KIM-LHC).","For repetitive work with hands and arms at a fixed place: sorting, packing, cutting, assembling, inspecting. Not for whole-body forces (KIM-BF) or moving loads of 3 kg or more (KIM-LHC)."],
+  prep:KIM_GEN.concat([["Film één minuut van het werk met je telefoon. Terugkijken (vertraagd) maakt tellen van bewegingen veel makkelijker. Beoordeel de hand die het meeste doet.","Film one minute of the work with your phone. Replaying it (slowed down) makes counting movements much easier. Assess the hand that does the most."]]),
+  steps:[
+   [["Duur: alleen de uren dat deze taak echt wordt uitgevoerd, zonder pauzes en ander werk.","Duration: only the hours this task is really carried out, without breaks and other work."],
+    ["Vasthouden: de hand houdt iets minstens 4 seconden stil vast (product, mes, gereedschap). Schat hoeveel seconden per minuut dat is.","Holding: the hand holds something still for at least 4 seconds (product, knife, tool). Estimate how many seconds per minute that is."],
+    ["Bewegen: tel het aantal keer per minuut dat de hand pakt, drukt, knijpt of snijdt.","Moving: count the number of times per minute the hand grips, presses, squeezes or cuts."],
+    ["Krachtniveau, probeer het zelf: Laag = knop indrukken, licht product geleiden. Matig = kleine delen pakken en in elkaar zetten. Hoog = draaien, wikkelen, stevig knijpen, snijden, klein handgereedschap. Zeer hoog = snijden met veel kracht, nietpistool. Piekkracht = bouten los- of vastdraaien, inpersen, slaan.","Force level, try it yourself: Low = pressing a button, guiding a light product. Moderate = gripping and joining small parts. High = turning, winding, firm squeezing, cutting, small hand tools. Very high = cutting with much force, staple gun. Peak = tightening or loosening bolts, pressing in, hitting."],
+    ["Extra krachtpunten: laat op 0 als er één duidelijke hoofdkracht is.","Extra force points: leave at 0 if there is one clear main force."]],
+   [["Hand-/armstand: kijk naar pols en elleboog. Eindstand = de pols is ver gebogen of gedraaid, de arm ver gestrekt of geheven.","Hand/arm position: look at the wrist and elbow. At the limit = the wrist is bent or rotated far, the arm stretched or raised far."],
+    ["Lichaamshouding: kies de regel die het beste past; bij twijfel de hogere.","Body posture: choose the line that fits best; when in doubt the higher one."],
+    KIM_ORG]],
+  read:KIM_READ,
+  err:[["Snelle bewegingen onderschatten: tel ze van een filmpje, niet op het oog.","Underestimating fast movements: count them from a video, not by eye."],
+    ["De hele dienst als taakduur invullen terwijl er ook ander werk gedaan wordt.","Entering the whole shift as task duration while other work is also done."]]},
+kimbf:{
+  use:["Voor werk waarbij het hele lichaam kracht zet: scheppen, zwaar handgereedschap, hendels en afsluiters, lasten over rollenbanen schuiven, slepen, vaten kantelen. Gaat het alleen om vinger- en handkracht, gebruik dan KIM-MHO.","For work where the whole body exerts force: shovelling, heavy hand tools, levers and valves, sliding loads over roller tracks, dragging, tipping drums. If only finger and hand force is involved, use KIM-MHO."],
+  prep:KIM_GEN,
+  steps:[
+   [["Duur of aantal: doorlopend werk (scheppen, schoonspuiten) = totaal aantal minuten per dag. Korte zware handelingen van minder dan een minuut (vat kantelen, afsluiter opendraaien) = aantal keer per dag.","Duration or number: continuous work (shovelling, pressure cleaning) = total minutes per day. Short heavy actions of less than a minute (tipping a drum, opening a valve) = number of times per day."],
+    ["Krachtniveau: Matig = haakse slijper, lasten tot 20 kg over een rollenbaan. Hoog = zwaar gereedschap 3–8 kg, hogedrukreiniger, scheppen tot 4 kg, 20–50 kg over rollenbaan. Zeer hoog = sloophamer, scheppen 4–8 kg, 50–100 kg over rollenbaan. Piekkracht = koevoet, voorhamer, vat van meer dan 200 kg kantelen.","Force level: Moderate = angle grinder, loads up to 20 kg on a roller track. High = heavy tools 3–8 kg, pressure washer, shovelling up to 4 kg, 20–50 kg on roller track. Very high = pneumatic hammer, shovelling 4–8 kg, 50–100 kg on roller track. Peak = crowbar, sledgehammer, tipping a drum over 200 kg."],
+    ["Vasthouden = kracht minstens 4 seconden stil volhouden. Bewegen = aantal krachtuitoefeningen. Bij doorlopend werk per minuut, bij korte handelingen per handeling.","Holding = keeping up force for at least 4 seconds. Moving = number of force exertions. For continuous work per minute, for short actions per action."],
+    ["Bij Vrouwen telt de kracht automatisch 1,5× zo zwaar.","For Women the force automatically counts 1.5× as heavy."]],
+   [["Houding: kijk naar de romp tijdens het kracht zetten, niet ervoor of erna.","Posture: look at the trunk while the force is exerted, not before or after."],
+    SOMS, KIM_ORG]],
+  read:KIM_READ,
+  err:[["Een piekkracht als matig inschatten omdat het maar kort duurt. Juist korte, zeer zware handelingen geven het risico.","Rating a peak force as moderate because it is short. Short, very heavy actions are exactly what causes the risk."]]},
+kimabp:{
+  use:["Voor werk in een ongunstige of lang volgehouden houding met weinig kracht: gebogen aan een band staan, boven het hoofd werken, knielen, de hele dag staan of zitten. Geeft drie scores: rug, schouders, knieën. De hoogste telt.","For work in an awkward or long-held posture with little force: standing bent over a belt, working overhead, kneeling, standing or sitting all day. Gives three scores: back, shoulders, knees. The highest counts."],
+  prep:KIM_GEN.concat([["Eenvoudige meting: kijk 10 minuten lang elke 30 seconden in welke houding de medewerker staat en turf dat. Het aandeel turfjes is het aandeel van de tijd.","Simple measurement: for 10 minutes, note every 30 seconds which posture the worker is in. The share of tallies is the share of the time."]]),
+  steps:[
+   [["Duur: de uren per dag dat deze taak wordt uitgevoerd.","Duration: the hours per day this task is carried out."]],
+   [["Een houding telt alleen mee als die minstens 1 minuut achter elkaar wordt volgehouden, of steeds terugkomt voor 10 seconden of langer.","A posture only counts if it is held for at least 1 minute at a time, or keeps returning for 10 seconds or longer."],
+    ["Kies per regel welk deel van de taaktijd de houding voorkomt. Meerdere regels mogen tegelijk ingevuld zijn, maar samen niet meer dan de hele tijd. 20° voorover is net zichtbaar gebogen, 60° is ver voorover (handen rond kniehoogte).","Choose per line what share of the task time the posture occurs. Several lines may be filled in, but together not more than the whole time. 20° forward is just visibly bent, 60° is far forward (hands around knee height)."]],
+   [["Armen geheven telt alleen als de arm niet ondersteund is. Boven schouderhoogte = de handen komen boven de schouders.","Arms raised only counts if the arm is not supported. Above shoulder level = the hands come above the shoulders."]],
+   [["Voortdurend staan = op één plek staan, ook als er af en toe een paar stappen gezet worden.","Constant standing = standing in one place, even if a few steps are taken now and then."]],
+   [["Deze punten tellen alleen mee voor een lichaamsregio waar je hierboven een houding hebt ingevuld.","These points only count for a body region where you filled in a posture above."], SOMS]],
+  read:KIM_READ.concat([["Een hoge score in één regio wordt niet goedgemaakt door een lage in een andere.","A high score in one region is not compensated by a low one in another."]]),
+  err:[["Houdingen van een paar seconden meetellen. Daarvoor is deze methode niet bedoeld.","Counting postures of a few seconds. This method is not meant for those."]]},
+kimbm:{
+  use:["Voor werk met veel lopen, klimmen, traplopen, ladders of kruipen, met of zonder last; of fietsen en steppen voor het werk. Voor dragen over korte afstand gebruik je KIM-LHC.","For work with much walking, climbing, stairs, ladders or crawling, with or without load; or cycling for work. For carrying over a short distance use KIM-LHC."],
+  prep:KIM_GEN.concat([["Een stappenteller of de loopafstand op de plattegrond helpt om de looptijd te schatten: 100 m normaal lopen is ongeveer 1,5 minuut.","A step counter or the walking distance on the floor plan helps to estimate walking time: 100 m of normal walking is about 1.5 minutes."]]),
+  steps:[
+   [["Duur: alleen de minuten per dag dat er echt gelopen, geklommen of gereden wordt.","Duration: only the minutes per day of actual walking, climbing or riding."],
+    ["Type beweging: kies het zwaarste type dat regelmatig voorkomt. Beoordeel traplopen en vlak lopen zo nodig apart.","Type of movement: choose the heaviest type that occurs regularly. Assess stairs and level walking separately if needed."],
+    ["Gedragen last: het gewicht dat tijdens het lopen wordt gedragen, inclusief gereedschap en rugzak.","Carried load: the weight carried while moving, including tools and backpack."],
+    SOMS, KIM_ORG]],
+  read:KIM_READ,
+  err:[["De hele dienst als duur invullen. Tel alleen de tijd in beweging.","Entering the whole shift as duration. Count only the time in motion."]]},
+harm:{
+  use:["Voor taken waarbij vooral handen en armen werken, meer dan 1 uur per dag, met krachten tot 6 kg per hand: sorteren, inpakken, snijden, schoonmaken, monteren. Niet voor beeldschermwerk en niet voor tillen van zwaardere lasten.","For tasks where mainly hands and arms work, more than 1 hour per day, with forces up to 6 kg per hand: sorting, packing, cutting, cleaning, assembling. Not for screen work and not for lifting heavier loads."],
+  prep:[["Film een paar minuten van het werk. Beoordeel de meest actieve hand; bij klachten de kant met klachten. Zijn beide handen even actief maar op een andere manier, maak dan twee beoordelingen (gebruik het veld Kenmerk).","Film a few minutes of the work. Assess the most active hand; with complaints the side with complaints. If both hands are equally active but in a different way, make two assessments (use the Label field)."],
+    ["De foto's met grenshoudingen staan in de TNO-handleiding HARM 2.0 op fysiekebelasting.tno.nl.","The photos with boundary postures are in the TNO HARM 2.0 manual at fysiekebelasting.tno.nl."]],
+  steps:[
+   [["Duur: alle perioden van deze taak op één dag bij elkaar, alleen voor dagen waarop de taak voorkomt. Taken die sterk op elkaar lijken tel je samen. Voorbeeld: 2 dagen 2 uur en 2 dagen 4 uur = gemiddeld 3 uur.","Duration: all periods of this task in one day added up, only for days on which the task occurs. Add up tasks that are very similar. Example: 2 days 2 hours and 2 days 4 hours = 3 hours on average."],
+    ["Pauze: aanvinken als er na hooguit 1,5 uur minstens 7,5 minuut pauze is (of 15 minuten na 3 uur) waarin de handen en armen echt rust krijgen.","Break: tick if after at most 1.5 hours there is a break of at least 7.5 minutes (or 15 minutes after 3 hours) in which hands and arms really rest."]],
+   [["Vul alleen de krachten in die voorkomen. Krachten die op elkaar lijken beoordeel je als één kracht.","Fill in only the forces that occur. Assess forces that are alike as one force."],
+    ["Klein (tot 1 kg): pincet, sorteren, licht product vasthouden. Groot (1–6 kg): mes of tang gebruiken, stevig vastpakken, zware hendel. Piek: slaan met hand, vuist of hamer.","Small (up to 1 kg): tweezers, sorting, holding a light product. Large (1–6 kg): using a knife or pliers, firm gripping, heavy lever. Peak: hitting with hand, fist or hammer."],
+    ["Duur = hoeveel seconden per minuut de kracht wordt volgehouden. Frequentie = hoe vaak per minuut de kracht wordt gezet. De app neemt de hoogste score.","Duration = how many seconds per minute the force is sustained. Frequency = how often per minute the force is exerted. The app takes the highest score."],
+    ["Komen er krachten boven 6 kg voor, beoordeel die dan met een tilmethode of KIM-BF.","If forces above 6 kg occur, assess them with a lifting method or KIM-BF."]],
+   [["Schat per houding welk deel van de taaktijd die voorkomt: minder dan 10 %, 10–50 % of meer dan de helft. Alleen duidelijk zichtbare afwijkingen van een ontspannen houding tellen.","Estimate per posture what share of the task time it occurs: less than 10 %, 10–50 % or more than half. Only clearly visible deviations from a relaxed posture count."],
+    ["Bovenarm geheven telt niet als de arm ondersteund wordt (armsteun, tafel).","Upper arm raised does not count if the arm is supported (armrest, table)."]],
+   [["Kijk naar pols en onderarm van de meest actieve hand. Een filmpje van dichtbij helpt.","Look at the wrist and forearm of the most active hand. A close-up video helps."]],
+   [["Trillingen: is de trillingswaarde van het gereedschap bekend (handleiding, leverancier), kies dan op de waarde in m/s². Anders op wat je ziet en voelt.","Vibration: if the vibration value of the tool is known (manual, supplier), choose by the value in m/s². Otherwise by what you see and feel."],
+    ["Andere factoren: elke aangevinkte factor telt 0,5 punt.","Other factors: every ticked factor counts 0.5 point."]]],
+  read:[["Score = taakduurscore × som van kracht, houdingen, trillingen en andere factoren. Onder 30 groen, 30–50 oranje, 50 of meer rood.","Score = task duration score × sum of force, postures, vibration and other factors. Below 30 green, 30–50 orange, 50 or more red."],
+    ["Omdat de duur als vermenigvuldiger werkt, helpt taakroulatie naar ander soort werk direct. De balken laten zien welke factor je daarnaast het beste kunt aanpakken.","Because duration works as a multiplier, rotating to a different kind of work helps directly. The bars show which factor is best to tackle besides."]],
+  err:[["Taakroulatie meetellen als afwisseling terwijl de andere taak dezelfde hand-armbelasting geeft.","Counting job rotation as variation while the other task gives the same hand-arm load."],
+    ["De minst actieve hand beoordelen.","Assessing the less active hand."]]},
+whi:{
+  use:["Voor taken van meer dan 30 minuten per dag waarin ongunstige houdingen voorkomen en weinig kracht nodig is (minder dan 1 kg). Geeft per houding groen, oranje of rood. Niet voor beeldschermwerk.","For tasks of more than 30 minutes per day with awkward postures and little force (less than 1 kg). Gives green, orange or red per posture. Not for screen work."],
+  prep:[["Komt een houding vaak en kort voor? Tel dan een paar keer hoe vaak per minuut en hoe lang per keer. Totale duur per dag (min) = keer per minuut × seconden per keer × taakduur in minuten ÷ 60.","Does a posture occur often and briefly? Then count a few times how often per minute and how long each time. Total duration per day (min) = times per minute × seconds per time × task duration in minutes ÷ 60."],
+    ["Kijk bij meerdere medewerkers en op meerdere momenten; neem het gemiddelde.","Observe several workers at several moments; take the average."]],
+  steps:[
+   [["Aaneengesloten = hoe lang de houding achter elkaar wordt volgehouden zonder onderbreking. Totaal = alle perioden op een dag bij elkaar. De slechtste van de twee bepaalt de kleur.","Continuous = how long the posture is held in one go without interruption. Total = all periods in a day added up. The worse of the two decides the colour."],
+    ["Plaatsgebonden staan = staan binnen een straal van ongeveer 2 meter.","Static standing = standing within a radius of about 2 metres."]],
+   [["Rompbuiging telt vanaf ongeveer 30° voorover: duidelijk zichtbaar gebogen. Rompdraaiing = de schouders staan gedraaid ten opzichte van de heupen.","Trunk flexion counts from about 30° forward: clearly visibly bent. Trunk rotation = the shoulders are turned relative to the hips."],
+    ["Vink aan als de houding vaak langer dan 1 minuut wordt volgehouden, of vaker dan 2 keer per minuut terugkomt. In de middelste duurcategorie wordt de uitkomst dan rood.","Tick if the posture is often held longer than 1 minute, or returns more than 2 times per minute. In the middle duration category the result then turns red."]],
+   [["Nekbuiging telt vanaf ongeveer 20°: de blik is duidelijk omlaag of omhoog gericht. Bovenarm geheven telt vanaf 30° en alleen zonder ondersteuning.","Neck flexion counts from about 20°: the gaze is clearly directed down or up. Upper arm raised counts from 30° and only without support."]],
+   [["Pols: duidelijk gebogen, gestrekt of zijwaarts geknikt, of de onderarm sterk gedraaid. Let op de vinkjes: meer dan 15 keer per minuut of langer dan 1 minuut volgehouden.","Wrist: clearly flexed, extended or bent sideways, or the forearm strongly rotated. Mind the ticks: more than 15 times per minute or held longer than 1 minute."]]],
+  read:[["Elke houding krijgt een eigen kleur; de slechtste bepaalt het eindoordeel. Pak rood eerst aan en kijk bij rood en oranje ook of de taakduur omlaag kan.","Each posture gets its own colour; the worst decides the overall verdict. Tackle red first and for red and orange also check whether task duration can be reduced."],
+    ["TNO geeft zelf aan dat de voorspellende waarde van dit instrument nog niet is vastgesteld. Gebruik het als signalering.","TNO itself states that the predictive value of this tool has not yet been established. Use it for screening."]],
+  err:[["Alleen de totale duur schatten en vergeten dat lang aaneengesloten knielen of staan ook telt.","Estimating only the total duration and forgetting that long continuous kneeling or standing also counts."]]},
+dutch:{
+  use:["Voor duwen en trekken van rollend materieel met het hele lichaam: rolcontainers, karren, palletwagens, kuipen. De TNO-tool rekent uit hoe zwaar de kar mag zijn; ErgoFlow legt je gegevens vast, toetst je kargewicht aan die grenzen en beoordeelt wielen, route en gedrag.","For pushing and pulling wheeled equipment with the whole body: roll containers, carts, pallet trucks, tubs. The TNO tool calculates how heavy the cart may be; ErgoFlow records your data, tests your cart weight against those limits and rates wheels, route and behaviour."],
+  prep:[["Je hebt een gratis account nodig op fysiekebelasting.tno.nl. Vul eerst stap 1–3 hier in, neem dezelfde waarden over in de TNO-tool en vul daarna stap 4 in.","You need a free account at fysiekebelasting.tno.nl. First complete steps 1–3 here, copy the same values into the TNO tool and then complete step 4."],
+    ["Neem mee: rolmaat (wieldiameter, afstand), het leeggewicht van de kar en het gewicht van de lading.","Bring: tape measure (wheel diameter, distance), the empty weight of the cart and the weight of the load."]],
+  steps:[
+   [["Gemiddeld gewicht = kar plus lading zoals die meestal is. Maximaal = de zwaarste kar die ongeveer één keer per dag voorkomt.","Average weight = cart plus load as it usually is. Maximum = the heaviest cart that occurs about once a day."],
+    ["Handhoogte: waar de handen de kar vastpakken, vergeleken met het lichaam.","Hand height: where the hands hold the cart, compared with the body."],
+    ["Frequentie: gemiddeld over de hele werkdag. Elke keer dat de kar in beweging wordt gebracht telt.","Frequency: averaged over the whole working day. Every time the cart is set in motion counts."],
+    ["2 of meer personen: alleen als de kar altijd samen op gang wordt gebracht.","2 or more persons: only if the cart is always started together."]],
+   [["Wieldiameter: meet het wiel, niet de vork. Kleine wielen (onder 13 cm) rollen zwaar, vooral over drempels en ruwe vloeren.","Wheel diameter: measure the wheel, not the fork. Small wheels (under 13 cm) roll heavily, especially over sills and rough floors."],
+    ["Ondergrond: kies wat op het grootste deel van de route ligt.","Floor: choose what covers most of the route."]],
+   [["Kijk bij het wegrijden: staan de zwenkwielen dwars, dan is de startkracht veel hoger.","Watch the start: if the swivel wheels are turned sideways, the starting force is much higher."]],
+   [["In de TNO-uitkomst staat een tabel Grenswaarde. Neem voor gemiddeld en maximaal gewicht over: Groen tot = het streefgewicht; Rood vanaf = de grens waarboven het rood wordt.","The TNO result has a table Grenswaarde. For average and maximum weight copy: Green below = the target weight; Red from = the limit above which it turns red."],
+    ["Verander je later iets in stap 1–3, reken de grenzen dan opnieuw uit in de TNO-tool.","If you later change something in steps 1–3, recalculate the limits in the TNO tool."]]],
+  read:[["Het oordeel is de slechtste van gemiddeld en maximaal gewicht. De punten eronder zijn verzwarende factoren: bij twee of meer is de werkelijke belasting waarschijnlijk hoger dan berekend.","The verdict is the worse of average and maximum weight. The items below are aggravating factors: with two or more the real load is probably higher than calculated."],
+    ["Geen TNO-account bij de hand? Gebruik KIM-PP: die geeft direct een score.","No TNO account at hand? Use KIM-PP: it gives a score right away."]],
+  err:[["Alleen de lading wegen en het leeggewicht van de kar vergeten.","Weighing only the load and forgetting the empty weight of the cart."],
+    ["De grenzen laten staan nadat afstand, frequentie of wielen zijn aangepast.","Leaving the limits in place after distance, frequency or wheels have changed."]]},
+reba:{
+  use:["Snelle beoordeling van één houding van het hele lichaam, bv. bij wisselend of onvoorspelbaar werk (onderhoud, schoonmaak, storingen). Het is een momentopname: duur en frequentie van de hele taak zitten er niet in.","Quick assessment of one whole-body posture, e.g. for varied or unpredictable work (maintenance, cleaning, breakdowns). It is a snapshot: duration and frequency of the whole task are not included."],
+  prep:SNAP_PREP,
+  steps:[
+   [["Romp: hoek tussen de romp en de verticaal. Nek: hoek van het hoofd ten opzichte van de romp. Vink draaien of zijwaarts buigen apart aan.","Trunk: angle between the trunk and the vertical. Neck: angle of the head relative to the trunk. Tick twisting or side-bending separately."],
+    ["Benen: Eén been / instabiel als het gewicht op één been rust of de ondergrond wiebelt. Kniebuiging geldt niet bij zitten.","Legs: Unilateral / unstable if the weight rests on one leg or the base wobbles. Knee flexion does not apply when sitting."],
+    ["Last / kracht: het gewicht in de handen of de kracht die gezet wordt.","Load / force: the weight in the hands or the force exerted."]],
+   [["Bovenarm: hoek tussen bovenarm en romp. Onderarm: 60–100° elleboogbuiging is de gunstige zone. Pols: meer dan 15° buigen of strekken is ongunstig.","Upper arm: angle between upper arm and trunk. Lower arm: 60–100° elbow flexion is the favourable zone. Wrist: more than 15° flexion or extension is unfavourable."],
+    ["Grip: Goed = stevig handvat. Redelijk = acceptabel maar niet ideaal. Slecht = niet goed vast te houden. Onaanvaardbaar = geen grip, onveilig.","Coupling: Good = sturdy handle. Fair = acceptable but not ideal. Poor = hard to hold. Unacceptable = no grip, unsafe."]],
+   [["Vink aan wat voor deze houding geldt. Elk vinkje telt 1 punt extra.","Tick what applies to this posture. Every tick adds 1 point."]]],
+  read:[["1–3 laag, 4–7 gemiddeld (nader onderzoeken), 8–10 hoog (snel veranderen), 11 of meer zeer hoog (direct veranderen). De balken tonen welk lichaamsdeel het zwaarst scoort.","1–3 low, 4–7 medium (investigate further), 8–10 high (change soon), 11 or more very high (change now). The bars show which body part scores highest."]],
+  err:[["Hoeken schatten van een foto die schuin is genomen. Dat geeft snel 10–20° fout.","Estimating angles from a photo taken at a slant. That easily gives a 10–20° error."]]},
+rula:{
+  use:["Snelle beoordeling van één houding bij overwegend zittend of staand werk waarbij vooral arm, nek en romp belast worden: inpakken, controle, assemblage, bediening. Voor houdingen van het hele lichaam gebruik je REBA.","Quick assessment of one posture in mainly seated or standing work loading mainly arm, neck and trunk: packing, inspection, assembly, operating. For whole-body postures use REBA."],
+  prep:SNAP_PREP,
+  steps:[
+   [["Bovenarm: hoek tussen bovenarm en romp. Onderarm: 60–100° elleboogbuiging is gunstig. Pols: Neutraal = recht; daarna tot 15° en meer dan 15° buigen of strekken.","Upper arm: angle between upper arm and trunk. Lower arm: 60–100° elbow flexion is favourable. Wrist: Neutral = straight; then up to 15° and more than 15° flexion or extension."],
+    ["Polsrotatie: Eindstand = de handpalm is helemaal naar boven of helemaal naar beneden gedraaid.","Wrist twist: End of range = the palm is turned fully up or fully down."],
+    ["Statisch / herhaald: aanvinken als de houding langer dan 1 minuut wordt volgehouden of vaker dan 4 keer per minuut terugkomt.","Static / repeated: tick if the posture is held longer than 1 minute or returns more than 4 times per minute."]],
+   [["Nek: hoek van het hoofd voorover. Romp: bij goed ondersteund zitten kies je de eerste optie.","Neck: forward angle of the head. Trunk: for well supported sitting choose the first option."],
+    ["Benen: Niet gesteund = voeten hangen, of het gewicht is ongelijk verdeeld.","Legs: Not supported = feet dangling, or the weight is unevenly distributed."]]],
+  read:[["1–2 aanvaardbaar, 3–4 nader onderzoeken, 5–6 binnenkort veranderen, 7 direct veranderen.","1–2 acceptable, 3–4 investigate further, 5–6 change soon, 7 change immediately."]],
+  err:[["Een gemiddelde houding beoordelen. Kies één echt moment.","Assessing an average posture. Pick one real moment."]]},
+screen:{
+  use:["Werkplekcheck voor iedereen die 2 uur of meer per dag met een beeldscherm werkt. Geeft aandachtspunten, geen risicoscore.","Workplace check for anyone working with a screen for 2 hours or more per day. Gives attention points, not a risk score."],
+  prep:[["Loop de werkplek langs samen met de medewerker terwijl die werkt zoals normaal. Een foto van opzij laat schermhoogte en zithouding goed zien.","Go through the workplace together with the worker while they work as usual. A photo from the side shows screen height and sitting posture well."]],
+  steps:[
+   [["Vink aan wat van toepassing is. Goed ingesteld betekent: voeten plat op de vloer of voetensteun, bovenbenen horizontaal, onderarmen ontspannen op blad of armsteunen, bovenrand van het scherm op of net onder ooghoogte, scherm op ongeveer een armlengte.","Tick what applies. Well adjusted means: feet flat on the floor or footrest, thighs horizontal, forearms relaxed on desk or armrests, top of the screen at or just below eye level, screen at about arm's length."]]],
+  read:[["Los elk aangevinkt punt op. Laat medewerkers daarnaast zelf de TNO BAS-check invullen voor persoonlijk advies.","Resolve every ticked item. In addition, let workers complete the TNO BAS check themselves for personal advice."]],
+  err:[]}
+};
+const FIG={niosh:`<svg viewBox="0 0 340 150" role="img" aria-label="H, V, A" style="width:100%;max-width:340px;display:block;margin:6px 0"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="10" y1="132" x2="200" y2="132"/><circle cx="62" cy="28" r="9"/><path d="M62 38 L70 82 L60 108 L64 132 M70 82 L84 108 L80 132 M65 50 L96 70 L118 72"/><rect x="112" y="60" width="30" height="24" rx="2"/></g><g stroke="#0B4F8A" stroke-width="1.6" fill="#0B4F8A" font-size="12" font-family="system-ui,sans-serif"><line x1="72" y1="142" x2="118" y2="142"/><line x1="72" y1="138" x2="72" y2="146"/><line x1="118" y1="138" x2="118" y2="146"/><text x="90" y="128" stroke="none">H</text><line x1="156" y1="72" x2="156" y2="132"/><line x1="152" y1="72" x2="160" y2="72"/><text x="162" y="106" stroke="none">V</text><g transform="translate(270,84)"><circle r="4" stroke="none"/><line x1="0" y1="0" x2="0" y2="-56" stroke-dasharray="4 3"/><line x1="0" y1="0" x2="40" y2="-40"/><path d="M0 -26 A26 26 0 0 1 18.4 -18.4" fill="none"/><rect x="34" y="-56" width="20" height="16" fill="none" transform="rotate(45 44 -48)"/><text x="8" y="-30" stroke="none">A</text></g></g></svg>`};
+const figCap=()=>T("H: van midden tussen de enkels tot midden van de handen. V: van vloer tot handen. A (bovenaanzicht): hoek tussen recht vooruit en de last.","H: from the midpoint between the ankles to the middle of the hands. V: from floor to hands. A (top view): angle between straight ahead and the load.");
+let helpAll=(()=>{try{return localStorage.getItem('ergoflow.help')==='1'}catch(e){return false}})();
+const helpOpen=new Set();
+const bullets=a=>a&&a.length?`<ul class="glist">${a.map(x=>`<li>${esc(tr(x))}</li>`).join('')}</ul>`:'';
+function stepGuide(m,n){ const g=MAN[m.id]; if(!g||!g.steps[n]) return ''; return `<div class="guide">${n===(m.id==='niosh'?1:-1)&&g.fig?FIG[g.fig]+`<p class="small muted" style="margin:0 0 6px">${figCap()}</p>`:''}${bullets(g.steps[n])}</div>`; }
+function manualSheet(m,rerender){ const g=MAN[m.id]; if(!g) return;
+  openSheet(`<div class="row"><h2 class="grow">${T('Uitleg','Guide')}: ${esc(tr(m.short))}</h2><button class="btn sm" id="mclose">${T('Sluit','Close')}</button></div>
+    <label class="chk" style="border:0"><input type="checkbox" id="helpall" ${helpAll?'checked':''}><span>${T('Toon de uitleg altijd bij elke stap','Always show the guidance with every step')}</span></label>
+    <h3 class="gh">${T('Waarvoor gebruik je dit?','What is it for?')}</h3><p class="gp">${esc(tr(g.use))}</p>
+    <h3 class="gh">${T('Voordat je begint','Before you start')}</h3>${bullets(g.prep)}
+    ${m.steps.map((s,n)=>`<h3 class="gh">${T('Stap','Step')} ${n+1} · ${esc(tr(s.title))}</h3>${n===1&&g.fig?FIG[g.fig]+`<p class="small muted" style="margin:0 0 6px">${figCap()}</p>`:''}${bullets(g.steps[n])}`).join('')}
+    <h3 class="gh">${T('De uitkomst lezen','Reading the result')}</h3>${bullets(g.read)}
+    ${g.err.length?`<h3 class="gh">${T('Veelgemaakte fouten','Common mistakes')}</h3>${bullets(g.err)}`:''}
+    <p class="ref">${esc(m.ref)}</p>`);
+  $('#mclose').onclick=closeSheet;
+  $('#helpall').onchange=e=>{ helpAll=e.target.checked; try{localStorage.setItem('ergoflow.help',helpAll?'1':'0');}catch(err){} helpOpen.clear(); rerender&&rerender(); }; }
+
 /* ---- assessment view ---- */
 function fieldHtml(f,ctx,path){ if(f.show&&!f.show(ctx)) return ''; const v=ctx[f.k], a=`data-k="${f.k}"${path}`, help=f.h?`<span class="help">${esc(tr(f.h))}</span>`:'';
   if(f.t==='chk') return `<label class="chk"><input type="checkbox" ${a} ${v?'checked':''}><span>${esc(tr(f.l))}</span></label>`;
@@ -782,9 +1012,9 @@ function railHtml(r){ const hasNum=typeof r.score==='number'&&isFinite(r.score);
   return {head:`<span class="big">${esc(scoreText(r))}${r.score!==null&&r.score!==undefined?`<small>${esc(r.label||T('punten','points'))}</small>`:''}</span><span class="grow verdict">${chip(r)}</span>`,gauge:g,
     more:(r.formula?`<p class="small muted" style="margin:0 0 8px">${T('Berekening','Calculation')}: ${esc(fmtN(r.formula))}</p>`:'')+rows+parts+(r.notes||[]).map(n=>`<p class="note">${esc(tr(n))}</p>`).join('')+(r.flags||[]).map(f=>`<div class="flag">${esc(tr(f))}</div>`).join('')}; }
 function viewEval(id){ const e=getEval(id), m=M[e.method], t=getTask(e.taskId); $('#view').className='wide';
-  setBar(tr(m.short)+' — '+(t.title||T('taak','task')),'#/t/'+t.id);
+  setBar(tr(m.short)+' — '+(t.title||T('taak','task')),'#/t/'+t.id,`<button id="guide">${ico('help')}<span>${T('Uitleg','Guide')}</span></button>`);
   $('#view').innerHTML=`<div class="evalgrid"><div>
-    <section class="card"><h2>${esc(tr(m.name))}</h2><p class="small muted" style="margin:0 0 12px">${esc(tr(m.scope))}${m.link?` <a href="${m.link}" target="_blank" rel="noopener">${T('Open TNO-tool','Open TNO tool')}</a>`:''}</p>
+    <section class="card"><h2>${esc(tr(m.name))}</h2><p class="small muted" style="margin:0 0 12px">${esc(tr(m.scope))}${m.link?` <a href="${m.link}" target="_blank" rel="noopener">${T('Open TNO-tool','Open TNO tool')}</a>`:''} <button class="btn sm ghost" id="guide2" style="height:auto;padding:0">${T('Hoe vul ik dit in?','How do I fill this in?')}</button></p>
       <div class="fgrid"><div class="fld"><span class="lbl">${T('Situatie','Situation')}</span><div class="seg"><button data-ph="before" aria-pressed="${e.phase==='before'}">${phaseName('before')}</button><button data-ph="after" aria-pressed="${e.phase==='after'}">${phaseName('after')}</button></div></div>
       <label class="fld"><span class="lbl">${T('Kenmerk (optioneel)','Label (optional)')}</span><input type="text" id="elabel" value="${esc(e.label)}" placeholder="${T('bv. rechterhand, lijn 3','e.g. right hand, line 3')}"></label></div></section>
     <div id="steps"></div>
@@ -792,14 +1022,17 @@ function viewEval(id){ const e=getEval(id), m=M[e.method], t=getTask(e.taskId); 
     <section class="card"><label class="fld" style="margin:0"><span class="lbl">${T('Toelichting','Notes')}</span><textarea id="enotes">${esc(e.notes)}</textarea></label><p class="ref">${esc(m.ref)}</p></section>
     <div class="row noprint" style="flex-wrap:wrap">${e.phase==='before'?`<button class="btn" id="redo">${T('Opnieuw beoordelen na maatregelen','Re-assess after measures')}</button>`:''}<span class="grow"></span><button class="btn danger" id="dele">${T('Beoordeling verwijderen','Delete assessment')}</button></div>
   </div><aside class="rail" id="rail"><button class="railhead" id="railhead" aria-expanded="false"></button><div id="railgauge"></div><div class="more" id="railmore"></div></aside></div>`;
-  const steps=()=>{ $('#steps').innerHTML=m.steps.map((s,n)=>`<section class="card step"><h2><span class="n">${n+1}</span>${esc(tr(s.title))}</h2>${s.fields.map(f=>fieldHtml(f,e.inputs,'')).join('')}</section>`).join(''); };
+  const isOpen=n=>helpAll!==helpOpen.has(m.id+n);
+  const steps=()=>{ $('#steps').innerHTML=m.steps.map((s,n)=>`<section class="card step"><h2><span class="n">${n+1}</span><span class="grow">${esc(tr(s.title))}</span><button type="button" class="helpbtn" data-help="${n}" aria-expanded="${isOpen(n)}" aria-label="${T('Uitleg bij deze stap','Guidance for this step')}">?</button></h2>${isOpen(n)?stepGuide(m,n):''}${s.fields.map(f=>fieldHtml(f,e.inputs,'')).join('')}</section>`).join(''); };
   const rail=()=>{ e.result=m.calc(e.inputs); const h=railHtml(e.result); $('#railhead').innerHTML=h.head; $('#railgauge').innerHTML=h.gauge; $('#railmore').innerHTML=h.more; saveSoon('evals',e); };
   steps(); rail(); renderPhotos($('#ephotos'),t.id,e.id);
+  $('#guide').onclick=$('#guide2').onclick=()=>manualSheet(m,steps);
   $('#railhead').onclick=()=>{ const o=$('#rail').classList.toggle('open'); $('#railhead').setAttribute('aria-expanded',o); };
   const target=el=>el.dataset.list?e.inputs[el.dataset.list][+el.dataset.idx]:e.inputs;
   $('#steps').oninput=ev=>{ const el=ev.target; if(el.dataset.k&&(el.type==='number'||el.type==='text')){ target(el)[el.dataset.k]=el.value; rail(); } };
   $('#steps').onchange=ev=>{ const el=ev.target; if(!el.dataset.k) return; if(el.type==='checkbox'){ target(el)[el.dataset.k]=el.checked; steps(); rail(); } else if(el.tagName==='SELECT'){ target(el)[el.dataset.k]=el.value; steps(); rail(); } };
   $('#steps').onclick=ev=>{ const b=ev.target.closest('button'); if(!b) return;
+    if(b.dataset.help!==undefined){ const k=m.id+b.dataset.help; helpOpen.has(k)?helpOpen.delete(k):helpOpen.add(k); steps(); return; }
     if(b.dataset.v!==undefined&&b.dataset.k){ target(b)[b.dataset.k]=b.dataset.v; steps(); rail(); }
     else if(b.dataset.ladd){ const f=m.steps.flatMap(s=>s.fields).find(f=>f.k===b.dataset.ladd), it={}; f.item.forEach(s=>{ if(s.def!==undefined) it[s.k]=s.def; }); e.inputs[f.k].push(it); steps(); rail(); }
     else if(b.dataset.lrem){ e.inputs[b.dataset.lrem].splice(+b.dataset.idx,1); steps(); rail(); } };
