@@ -40,6 +40,11 @@ svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke
 .chip{display:inline-flex;align-items:center;gap:6px;border-radius:99px;padding:2px 10px 2px 8px;font-size:.84rem;font-weight:600;background:var(--soft);border:1px solid var(--line);white-space:nowrap;print-color-adjust:exact;-webkit-print-color-adjust:exact}
 .tag{font-size:.76rem;font-weight:600;padding:1px 7px;border-radius:5px;background:var(--accent-soft);color:var(--accent)}
 .tag.after{background:#E4F3EA;color:#1C6B3C}
+.bar button .dot{width:8px;height:8px;margin-left:-4px;align-self:flex-start;margin-top:10px;background:rgba(255,255,255,.35)}
+.bar button .dot.b-g{background:#6EE7A0}
+.banner{background:#FFF4DA;border:1px solid #EBCB7A;border-radius:var(--rads);padding:8px 12px;font-size:.86rem;margin:0 0 12px}
+#toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translate(-50%,8px);background:var(--ink);color:#fff;font-size:.86rem;padding:7px 14px;border-radius:99px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:60}
+#toast.on{opacity:.94;transform:translate(-50%,0)}
 /* lists */
 .item{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--rad);padding:12px 14px;margin-bottom:8px}
 button.item:hover{border-color:var(--accent)}
@@ -668,33 +673,75 @@ const TRIAGE=[
 function defaults(m){ const o={}; const walk=fs=>fs.forEach(f=>{ if(f.t==='list'){ const it={}; f.item.forEach(s=>{ if(s.def!==undefined) it[s.k]=s.def; }); o[f.k]=[it]; } else if(f.def!==undefined) o[f.k]=f.def; }); m.steps.forEach(s=>walk(s.fields)); return o; }
 
 /* ===================== ErgoFlow app ===================== */
-const VERSION='0.2.0';
+const VERSION='0.3.0';
 let LANG=(()=>{try{return localStorage.getItem('ergoflow.lang')}catch(e){return null}})()||'nl';
 const T=(nl,en)=>LANG==='nl'?nl:en, tr=x=>Array.isArray(x)?x[LANG==='nl'?0:1]:(x??'');
 tr_=T;
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const uid=()=>(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'id-'+Date.now().toString(36)+Math.random().toString(36).slice(2,10);
 const today=()=>new Date().toISOString().slice(0,10);
 const fmtN=n=>n===Infinity?'∞':(n===null||n===undefined||n==='')?'–':String(n).replace(/\./g,LANG==='nl'?',':'.');
 const fmtD=d=>{ if(!d)return ''; const [y,m,dd]=d.split('-'); return dd+'-'+m+'-'+y; };
-const ICON={back:'<path d="M15 5l-7 7 7 7"/>',plus:'<path d="M12 5v14M5 12h14"/>',cam:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',print:'<path d="M7 9V4h10v5M7 17H4v-7h16v7h-3M7 14h10v6H7z"/>',dots:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',chev:'<path d="M6 15l6-6 6 6"/>',help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.8.5-1.1 1-1.1 1.8M12 17h.01"/>'};
+const ICON={back:'<path d="M15 5l-7 7 7 7"/>',plus:'<path d="M12 5v14M5 12h14"/>',cam:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',print:'<path d="M7 9V4h10v5M7 17H4v-7h16v7h-3M7 14h10v6H7z"/>',dots:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',chev:'<path d="M6 15l6-6 6 6"/>',sync:'<path d="M4 12a8 8 0 0 1 13.7-5.7L20 8M20 4v4h-4M20 12a8 8 0 0 1-13.7 5.7L4 16M4 20v-4h4"/>',help:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.8.5-1.1 1-1.1 1.8M12 17h.01"/>'};
 const ico=n=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
 
-/* ---- Storage seam. All persistence goes through Store; swap this object for a SfhaSync-backed
-        implementation (app name "ergoflow", collections tasks/evals/photos, blobs as assets) per SYNC-CONTRACT. ---- */
-const Store={ db:null,
+/* ---- Storage: sfha-sync v1 (shared IndexedDB + P2P, see SYNC-CONTRACT) with a local fallback ----
+   sync mode : records live in SfhaSync under app "ergoflow", collections tasks / evals / photos; photo files are assets,
+               referenced from the photo payload as full:{hash} and base:{hash}. SfhaSync is the single source of truth.
+   local mode: only when sync.v1.js cannot be loaded. Writes go to the old "ergoflow" IndexedDB flagged _pending and are
+               pushed into SfhaSync on the next start where the sync layer is available. */
+const APP='ergoflow', SYNC_URL='https://weirders.github.io/ToolDeck/sync.v1.js';
+const Local={ db:null,
   open(){ return new Promise((res,rej)=>{ const r=indexedDB.open('ergoflow',1);
     r.onupgradeneeded=()=>['tasks','evals','photos','blobs'].forEach(s=>r.result.createObjectStore(s,{keyPath:'id'}));
     r.onsuccess=()=>{this.db=r.result;res();}; r.onerror=()=>rej(r.error); }); },
   tx(s,mode,fn){ return new Promise((res,rej)=>{ const t=this.db.transaction(s,mode), q=fn(t.objectStore(s)); t.oncomplete=()=>res(q&&q.result); t.onerror=()=>rej(t.error); }); },
   all(s){return this.tx(s,'readonly',o=>o.getAll());}, get(s,id){return this.tx(s,'readonly',o=>o.get(id));},
   put(s,v){return this.tx(s,'readwrite',o=>o.put(v));}, del(s,id){return this.tx(s,'readwrite',o=>o.delete(id));} };
+const COLLS=['tasks','evals','photos'];
+const payloadOf=o=>{ const p=Object.assign({},o); delete p.id; delete p.result; delete p.fresh; delete p._pending; delete p._deleted; return p; };
+const loadScript=(src,ms)=>new Promise(res=>{ if(window.SfhaSync) return res(true); const el=document.createElement('script'); let done=false; const fin=v=>{ if(!done){ done=true; res(v); } };
+  el.src=src; el.onload=()=>fin(!!window.SfhaSync); el.onerror=()=>fin(false); setTimeout(()=>fin(!!window.SfhaSync),ms); document.head.appendChild(el); });
+const Store={ mode:'local', own:new Map(),
+  async open(){ try{ await Local.open(); }catch(e){}
+    if(await loadScript(SYNC_URL,6000)){ try{ await SfhaSync.init({app:APP}); this.mode='sync'; await migrateOld(); await drainPending(); SfhaSync.onChange(onSyncChange); SfhaSync.onStatus(syncDot); }catch(e){ console.warn('ErgoFlow: sync layer unavailable, using local storage',e); this.mode='local'; } }
+    if(this.mode==='local'&&!Local.db) throw new Error('no storage'); },
+  mark(id,d=1){ const n=(this.own.get(id)||0)+d; n>0?this.own.set(id,n):this.own.delete(id); },
+  async all(c){ if(this.mode==='sync') return (await SfhaSync.list(APP,c)).map(r=>Object.assign({},r.payload,{id:r.id})); return (await Local.all(c)).filter(o=>!o._deleted); },
+  async put(c,o){ if(this.mode==='sync'){ this.mark(o.id); try{ await SfhaSync.put(APP,c,{id:o.id,payload:payloadOf(o)}); }catch(e){ this.mark(o.id,-1); throw e; } } else await Local.put(c,Object.assign({},o,{result:undefined,_pending:true})); },
+  async del(c,id){ if(this.mode==='sync'){ this.mark(id); const r=await SfhaSync.del(APP,c,id); if(!r) this.mark(id,-1); } else await Local.put(c,{id,_deleted:true,_pending:true}); },
+  async putBlobs(p,b){ if(this.mode==='sync'){ p.full={hash:await SfhaSync.putAsset(b.full)}; p.base=(b.base&&b.base!==b.full)?{hash:await SfhaSync.putAsset(b.base)}:p.full; } else await Local.put('blobs',{id:p.id,full:b.full,base:b.base||b.full}); },
+  async getBlobs(p){ if(this.mode!=='sync') return Local.get('blobs',p.id); if(!p.full||!p.full.hash) return null; const full=await SfhaSync.getAsset(p.full.hash); if(!full) return null;
+    const base=(p.base&&p.base.hash!==p.full.hash)?await SfhaSync.getAsset(p.base.hash):null; return {full,base:base||full}; },
+  async delBlobs(p){ if(this.mode!=='sync') await Local.del('blobs',p.id); } };
+/* one-time copy of the pre-sync storage, with the records' old timestamps so real edits elsewhere win */
+async function migrateOld(){ if(!Local.db) return; await SfhaSync.migrate('v1',async()=>{ const iso=ms=>new Date(ms||0).toISOString();
+    for(const c of COLLS) for(const o of await Local.all(c)){ if(o._deleted) continue; const pl=payloadOf(o);
+      if(c==='photos'){ const b=await Local.get('blobs',o.id); if(b&&b.full){ pl.full={hash:await SfhaSync.putAsset(b.full)}; pl.base=b.base?{hash:await SfhaSync.putAsset(b.base)}:pl.full; } }
+      await SfhaSync.put(APP,c,{id:o.id,payload:pl,updatedAt:iso(o.updated||o.created)},{keepStamp:true,silent:true}); } }); }
+/* push what was written while the sync layer could not be loaded */
+async function drainPending(){ if(!Local.db) return; for(const c of COLLS) for(const o of await Local.all(c)){ if(!o._pending) continue;
+    if(o._deleted){ await SfhaSync.del(APP,c,o.id); await Local.del(c,o.id); continue; } const pl=payloadOf(o);
+    if(c==='photos'){ const b=await Local.get('blobs',o.id); if(b&&b.full){ pl.full={hash:await SfhaSync.putAsset(b.full)}; pl.base=b.base?{hash:await SfhaSync.putAsset(b.base)}:pl.full; } }
+    await SfhaSync.put(APP,c,{id:o.id,payload:pl},{silent:true}); delete o._pending; await Local.put(c,o); } }
+/* changes from other windows or devices: reload from SfhaSync, but never under the user's fingers */
+let lastInput=0, refreshT=null; document.addEventListener('input',()=>{ lastInput=Date.now(); },true);
+function onSyncChange(ev){ if(ev.asset){ if(location.hash.startsWith('#/r/')&&S.photos.some(p=>p.full&&p.full.hash===ev.asset)) scheduleRefresh(); return; }
+  if(ev.app!==APP) return; let ext=false; for(const id of ev.ids||[]){ if(Store.own.get(id)) Store.mark(id,-1); else ext=true; } if(ext) scheduleRefresh(); }
+function scheduleRefresh(ms=500){ clearTimeout(refreshT); refreshT=setTimeout(doRefresh,ms); }
+async function doRefresh(){ if(Date.now()-lastInput<3000||$('#editor').classList.contains('on')||$('#sheet').classList.contains('on')) return scheduleRefresh(1500);
+  await flushSaves(); const y=window.scrollY, open=$('#rail')&&$('#rail').classList.contains('open'); await loadAll(); route(); if(open&&$('#rail')) $('#rail').classList.add('open'); window.scrollTo(0,y); toast(T('Bijgewerkt via sync','Updated via sync')); }
+function syncDot(){ const d=$('#syncdot'); if(d&&window.SfhaSync){ const n=(SfhaSync.status().connections||[]).length; d.className='dot'+(n?' b-g':''); d.title=n+' '+T('verbonden','connected'); } }
+function toast(msg){ let t=$('#toast'); if(!t){ t=document.createElement('div'); t.id='toast'; t.className='noprint'; document.body.appendChild(t); } t.textContent=msg; t.classList.add('on'); clearTimeout(toast.t); toast.t=setTimeout(()=>t.classList.remove('on'),2200); }
 const S={tasks:[],evals:[],photos:[]};
 const getTask=id=>S.tasks.find(t=>t.id===id), getEval=id=>S.evals.find(e=>e.id===id);
 const taskEvals=id=>S.evals.filter(e=>e.taskId===id).sort((a,b)=>a.created-b.created);
 const photosOf=(taskId,evalId)=>S.photos.filter(p=>p.taskId===taskId&&(evalId===undefined||(p.evalId||null)===(evalId||null))).sort((a,b)=>a.created-b.created);
-const timers={}; const saveSoon=(store,obj)=>{ clearTimeout(timers[obj.id]); timers[obj.id]=setTimeout(()=>Store.put(store,obj),350); };
+const timers={}, pendingSaves=new Map(); const saveSoon=(store,obj)=>{ clearTimeout(timers[obj.id]); pendingSaves.set(obj.id,[store,obj]); timers[obj.id]=setTimeout(()=>{ pendingSaves.delete(obj.id); Store.put(store,obj); },350); };
+async function flushSaves(){ for(const [id,[store,obj]] of [...pendingSaves]){ clearTimeout(timers[id]); pendingSaves.delete(id); await Store.put(store,obj); } }
+const dropSave=id=>{ clearTimeout(timers[id]); pendingSaves.delete(id); };
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') flushSaves(); }); window.addEventListener('pagehide',()=>{ flushSaves(); });
 function touchTask(t){ t.updated=Date.now(); saveSoon('tasks',t); }
 /* current state of a task: if a method has an "after" assessment, that one counts */
 function currentEvals(taskId){ const ev=taskEvals(taskId); return ev.filter(e=>e.phase==='after'||!ev.some(x=>x.phase==='after'&&x.method===e.method&&(x.label||'')===(e.label||''))); }
@@ -716,8 +763,9 @@ window.addEventListener('hashchange',()=>{ route(); window.scrollTo(0,0); });
 
 /* ---- home ---- */
 let query='';
-function viewHome(){ setBar('ErgoFlow',null,`<button id="menu" aria-label="Menu">${ico('dots')}</button>`);
-  $('#view').innerHTML=`<div class="row" style="margin-bottom:12px"><input type="text" id="q" class="grow" placeholder="${T('Zoek taak, afdeling of werkplek','Search task, department or workstation')}" value="${esc(query)}"><button class="btn pri" id="new">${ico('plus')}${T('Nieuwe taak','New task')}</button></div><div id="list"></div>`;
+function viewHome(){ setBar('ErgoFlow',null,(Store.mode==='sync'?`<button id="syncb" aria-label="Sync">${ico('sync')}<span class="dot" id="syncdot"></span></button>`:'')+`<button id="menu" aria-label="Menu">${ico('dots')}</button>`);
+  $('#view').innerHTML=`<div class="row" style="margin-bottom:12px"><input type="text" id="q" class="grow" placeholder="${T('Zoek taak, afdeling of werkplek','Search task, department or workstation')}" value="${esc(query)}"><button class="btn pri" id="new">${ico('plus')}${T('Nieuwe taak','New task')}</button></div>${Store.mode==='local'?`<p class="banner">${T('Lokale modus: de sync-laag kon niet worden geladen. Wat je nu vastlegt wordt overgezet zodra die weer bereikbaar is.','Local mode: the sync layer could not be loaded. What you record now is transferred as soon as it is reachable again.')}</p>`:''}<div id="list"></div>`;
+  if($('#syncb')){ $('#syncb').onclick=()=>SfhaSync.openPanel(); syncDot(); }
   const list=()=>{ const q=query.toLowerCase(), ts=S.tasks.filter(t=>!q||[t.title,t.dept,t.station].join(' ').toLowerCase().includes(q)).sort((a,b)=>b.updated-a.updated);
     $('#list').innerHTML=ts.length?ts.map(t=>{ const ph=photosOf(t.id)[0], n=taskEvals(t.id).length, b=taskBand(t.id);
       return `<button class="item" data-go="#/t/${t.id}">${ph?`<img class="thumb" src="${ph.thumb}" alt="">`:`<span class="thumb"></span>`}<span class="grow"><span class="t">${esc(t.title||T('Naamloze taak','Untitled task'))}</span><br><span class="muted small">${esc([t.dept,t.station,fmtD(t.date)].filter(Boolean).join(', '))}${n?' — '+n+' '+T(n===1?'beoordeling':'beoordelingen',n===1?'assessment':'assessments'):''}</span></span><span class="dot ${b?'b-'+b:''}"></span></button>`; }).join('')
@@ -726,11 +774,12 @@ function viewHome(){ setBar('ErgoFlow',null,`<button id="menu" aria-label="Menu"
   $('#new').onclick=async()=>{ const t={id:uid(),title:'',dept:'',station:'',assessor:S.tasks[0]?.assessor||'',date:today(),exposed:'',hours:'',desc:'',triage:{},measures:[],created:Date.now(),updated:Date.now(),fresh:true}; S.tasks.push(t); await Store.put('tasks',t); location.hash='#/t/'+t.id; };
   $('#menu').onclick=menuSheet; }
 function menuSheet(){ openSheet(`<h2>ErgoFlow <span class="muted small">v${VERSION}</span></h2>
-  <p class="small muted">${T('Beoordeling van fysieke belasting. Alle gegevens blijven op dit apparaat.','Physical workload assessment. All data stays on this device.')}</p>
+  <p class="small muted">${Store.mode==='sync'?T('Beoordeling van fysieke belasting. Gegevens staan op dit apparaat en synchroniseren rechtstreeks met je gekoppelde apparaten.','Physical workload assessment. Data lives on this device and syncs directly with your paired devices.'):T('Beoordeling van fysieke belasting. Lokale modus: gegevens staan alleen op dit apparaat.','Physical workload assessment. Local mode: data is on this device only.')}</p>
   <div class="fld"><span class="lbl">${T('Taal','Language')}</span><div class="seg"><button data-lang="nl" aria-pressed="${LANG==='nl'}">Nederlands</button><button data-lang="en" aria-pressed="${LANG==='en'}">English</button></div></div>
-  <div class="row" style="flex-wrap:wrap"><button class="btn" id="exp">${T('Alles exporteren (JSON)','Export everything (JSON)')}</button><button class="btn" id="impb">${T('Importeren','Import')}</button></div>
+  <div class="row" style="flex-wrap:wrap"><button class="btn" id="exp">${T('Alles exporteren (JSON)','Export everything (JSON)')}</button><button class="btn" id="impb">${T('Importeren','Import')}</button>${Store.mode==='sync'?`<button class="btn" id="syncp">${T('Synchronisatie','Sync')}</button>`:''}</div>
   <p class="small muted" style="margin-bottom:0">${T('Methoden','Methods')}: ${Object.values(M).map(m=>tr(m.short)).join(', ')}.</p>`);
   $$('[data-lang]',$('#panel')).forEach(b=>b.onclick=()=>{ LANG=b.dataset.lang; try{localStorage.setItem('ergoflow.lang',LANG);}catch(e){} document.documentElement.lang=LANG; route(); });
+  if($('#syncp')) $('#syncp').onclick=()=>{ closeSheet(); SfhaSync.openPanel(); };
   $('#exp').onclick=()=>exportJSON(); $('#impb').onclick=()=>$('#imp').click(); }
 
 /* ---- task ---- */
@@ -766,7 +815,7 @@ function viewTask(id){ const t=getTask(id), ev=taskEvals(id);
   $('#measures').onclick=e=>{ const d=e.target.closest('[data-mdel]'); if(d){ t.measures.splice(+d.dataset.mdel,1); touchTask(t); measures(); } };
   $('#expt').onclick=()=>exportJSON(id);
   $('#delt').onclick=async()=>{ if(!confirm(T('Deze taak met alle beoordelingen en foto\'s verwijderen?','Delete this task with all assessments and photos?')))return;
-    for(const p of photosOf(id)){ await Store.del('photos',p.id); await Store.del('blobs',p.id); } for(const e of taskEvals(id)) await Store.del('evals',e.id); await Store.del('tasks',id);
+    dropSave(id); for(const p of photosOf(id)){ await Store.del('photos',p.id); await Store.delBlobs(p); } for(const e of taskEvals(id)){ dropSave(e.id); await Store.del('evals',e.id); } await Store.del('tasks',id);
     S.photos=S.photos.filter(p=>p.taskId!==id); S.evals=S.evals.filter(e=>e.taskId!==id); S.tasks=S.tasks.filter(x=>x.id!==id); location.hash='#/'; }; }
 function methodSheet(taskId){ openSheet(`<h2>${T('Kies een methode','Choose a method')}</h2>`+GROUPS.map(([g,l])=>`<div class="mgroup">${tr(l)}</div>`+Object.values(M).filter(m=>m.group===g).map(m=>`<button class="mitem" data-m="${m.id}"><b>${esc(tr(m.name))}</b><span class="small muted">${esc(tr(m.scope))}</span></button>`).join('')).join(''));
   $('#panel').onclick=async e=>{ const b=e.target.closest('[data-m]'); if(b){ const ne=await createEval(taskId,b.dataset.m); $('#panel').onclick=null; location.hash='#/e/'+ne.id; } }; }
@@ -1024,8 +1073,8 @@ function viewEval(id){ const e=getEval(id), m=M[e.method], t=getTask(e.taskId); 
   </div><aside class="rail" id="rail"><button class="railhead" id="railhead" aria-expanded="false"></button><div id="railgauge"></div><div class="more" id="railmore"></div></aside></div>`;
   const isOpen=n=>helpAll!==helpOpen.has(m.id+n);
   const steps=()=>{ $('#steps').innerHTML=m.steps.map((s,n)=>`<section class="card step"><h2><span class="n">${n+1}</span><span class="grow">${esc(tr(s.title))}</span><button type="button" class="helpbtn" data-help="${n}" aria-expanded="${isOpen(n)}" aria-label="${T('Uitleg bij deze stap','Guidance for this step')}">?</button></h2>${isOpen(n)?stepGuide(m,n):''}${s.fields.map(f=>fieldHtml(f,e.inputs,'')).join('')}</section>`).join(''); };
-  const rail=()=>{ e.result=m.calc(e.inputs); const h=railHtml(e.result); $('#railhead').innerHTML=h.head; $('#railgauge').innerHTML=h.gauge; $('#railmore').innerHTML=h.more; saveSoon('evals',e); };
-  steps(); rail(); renderPhotos($('#ephotos'),t.id,e.id);
+  const rail=(save=true)=>{ e.result=m.calc(e.inputs); const h=railHtml(e.result); $('#railhead').innerHTML=h.head; $('#railgauge').innerHTML=h.gauge; $('#railmore').innerHTML=h.more; if(save) saveSoon('evals',e); };
+  steps(); rail(false);   /* rendering must never write: a write broadcasts a change to every other window and device */ renderPhotos($('#ephotos'),t.id,e.id);
   $('#guide').onclick=$('#guide2').onclick=()=>manualSheet(m,steps);
   $('#railhead').onclick=()=>{ const o=$('#rail').classList.toggle('open'); $('#railhead').setAttribute('aria-expanded',o); };
   const target=el=>el.dataset.list?e.inputs[el.dataset.list][+el.dataset.idx]:e.inputs;
@@ -1039,7 +1088,7 @@ function viewEval(id){ const e=getEval(id), m=M[e.method], t=getTask(e.taskId); 
   $$('[data-ph]').forEach(b=>b.onclick=()=>{ e.phase=b.dataset.ph; saveSoon('evals',e); viewEval(id); });
   $('#elabel').oninput=ev=>{ e.label=ev.target.value; saveSoon('evals',e); }; $('#enotes').oninput=ev=>{ e.notes=ev.target.value; saveSoon('evals',e); };
   if($('#redo')) $('#redo').onclick=async()=>{ const ne=await createEval(t.id,e.method,'after',e.inputs,e.label); location.hash='#/e/'+ne.id; };
-  $('#dele').onclick=async()=>{ if(!confirm(T('Deze beoordeling verwijderen?','Delete this assessment?')))return; clearTimeout(timers[e.id]); for(const p of photosOf(t.id,e.id)){ p.evalId=null; await Store.put('photos',p); } await Store.del('evals',e.id); S.evals=S.evals.filter(x=>x.id!==e.id); location.hash='#/t/'+t.id; }; }
+  $('#dele').onclick=async()=>{ if(!confirm(T('Deze beoordeling verwijderen?','Delete this assessment?')))return; dropSave(e.id); for(const p of photosOf(t.id,e.id)){ p.evalId=null; await Store.put('photos',p); } await Store.del('evals',e.id); S.evals=S.evals.filter(x=>x.id!==e.id); location.hash='#/t/'+t.id; }; }
 
 /* ---- photos ---- */
 let photoTarget=null;
@@ -1054,11 +1103,11 @@ const toBlob=(c,q=.86)=>new Promise(r=>c.toBlob(r,'image/jpeg',q));
 function scaled(src,max){ const w=src.width,h=src.height,k=Math.min(1,max/Math.max(w,h)),c=document.createElement('canvas'); c.width=Math.round(w*k); c.height=Math.round(h*k); c.getContext('2d').drawImage(src,0,0,c.width,c.height); return c; }
 async function addPhoto(file,taskId,evalId){ const bmp=await loadBitmap(file), c=scaled(bmp,1600), full=await toBlob(c);
   const p={id:uid(),taskId,evalId:evalId||null,caption:'',thumb:scaled(c,320).toDataURL('image/jpeg',.8),w:c.width,h:c.height,ann:[],scale:null,created:Date.now()};
-  S.photos.push(p); await Store.put('photos',p); await Store.put('blobs',{id:p.id,full,base:full}); return p; }
+  await Store.putBlobs(p,{full,base:full}); S.photos.push(p); await Store.put('photos',p); return p; }
 
 /* ---- photo editor: arrow, angle, ruler, text, blur (burned in) ---- */
 const ED={};
-async function openEditor(photoId,onClose){ const p=S.photos.find(x=>x.id===photoId), bl=await Store.get('blobs',photoId); if(!p||!bl) return;
+async function openEditor(photoId,onClose){ const p=S.photos.find(x=>x.id===photoId); if(!p) return; const bl=await Store.getBlobs(p); if(!bl){ toast(T('Deze foto is nog niet gesynchroniseerd naar dit apparaat.','This photo has not been synced to this device yet.')); return; }
   const base=scaled(await loadBitmap(bl.base||bl.full),4000); Object.assign(ED,{p,base,ann:JSON.parse(JSON.stringify(p.ann||[])),scale:p.scale,tool:'arrow',pts:[],drag:null,undo:[],dirty:false,onClose});
   const tools=[['arrow',T('Pijl','Arrow')],['angle',T('Hoek','Angle')],['ruler',T('Maat','Measure')],['text',T('Tekst','Text')],['blur',T('Vervaag','Blur')]];
   $('#editor').innerHTML=`<div class="top"><button id="edx">${T('Sluit','Close')}</button><button id="eddel">${T('Verwijder','Delete')}</button><span style="flex:1"></span><button id="edsave" style="background:#F2C200;color:#111;border-color:#F2C200">${T('Bewaar','Save')}</button></div>
@@ -1082,9 +1131,9 @@ async function openEditor(photoId,onClose){ const p=S.photos.find(x=>x.id===phot
   $('#editor .tools').onclick=ev=>{ const b=ev.target.closest('[data-tool]'); if(b){ ED.tool=b.dataset.tool; ED.pts=[]; $$('[data-tool]').forEach(x=>x.setAttribute('aria-pressed',x===b)); edHint(); edDraw(); } };
   $('#edundo').onclick=()=>{ if(ED.pts.length){ ED.pts.pop(); } else { const u=ED.undo.pop(); if(u==='ann'){ ED.ann.pop(); if(!ED.ann.some(a=>a.t==='ruler')) ED.scale=null; } else if(u) base.getContext('2d').putImageData(u.img,u.x,u.y); } edHint(); edDraw(); };
   $('#edx').onclick=()=>{ if(ED.dirty&&!confirm(T('Wijzigingen niet bewaren?','Discard changes?'))) return; edClose(); };
-  $('#eddel').onclick=async()=>{ if(!confirm(T('Deze foto verwijderen?','Delete this photo?'))) return; await Store.del('photos',p.id); await Store.del('blobs',p.id); S.photos=S.photos.filter(x=>x.id!==p.id); edClose(); };
+  $('#eddel').onclick=async()=>{ if(!confirm(T('Deze foto verwijderen?','Delete this photo?'))) return; await Store.del('photos',p.id); await Store.delBlobs(p); S.photos=S.photos.filter(x=>x.id!==p.id); edClose(); };
   $('#edsave').onclick=async()=>{ const out=document.createElement('canvas'); out.width=base.width; out.height=base.height; const c=out.getContext('2d'); c.drawImage(base,0,0); edPaint(c,ED.ann);
-    p.caption=$('#edcap').value; p.ann=ED.ann; p.scale=ED.scale; p.thumb=scaled(out,320).toDataURL('image/jpeg',.8); await Store.put('blobs',{id:p.id,full:await toBlob(out),base:await toBlob(base,.9)}); await Store.put('photos',p); edClose(); }; }
+    p.caption=$('#edcap').value; p.ann=ED.ann; p.scale=ED.scale; p.thumb=scaled(out,320).toDataURL('image/jpeg',.8); await Store.putBlobs(p,{full:await toBlob(out),base:await toBlob(base,.9)}); await Store.put('photos',p); edClose(); }; }
 function edClose(){ $('#editor').classList.remove('on'); $('#editor').innerHTML=''; const f=ED.onClose; ED.base=null; if(f) f(); }
 function edAsk(label,type,cb){ const a=$('#edask'), i=$('#edin'); i.type=type; i.value=''; i.placeholder=label; if(type==='number') i.inputMode='decimal'; a.classList.add('on'); i.focus();
   const done=()=>{ a.classList.remove('on'); cb(i.value.trim()); }; $('#edok').onclick=done; i.onkeydown=e=>{ if(e.key==='Enter') done(); }; }
@@ -1114,7 +1163,7 @@ const topParts=r=>(r.parts||[]).map(p=>({p,s:p.pen!==undefined?p.pen:(p.max?p.v/
 async function viewReport(id){ const t=getTask(id), ev=taskEvals(id); $('#view').className='wide';
   setBar(T('Rapport','Report'),'#/t/'+id,`<button id="rmode"><span>${RPT.full?T('Volledig','Full'):T('Compact','Compact')}</span></button><button id="rprint">${ico('print')}<span>${T('Afdrukken','Print')}</span></button>`);
   rptUrls.forEach(u=>URL.revokeObjectURL(u)); rptUrls=[]; const url={};
-  for(const p of photosOf(id)){ const b=await Store.get('blobs',p.id); if(b&&b.full){ url[p.id]=URL.createObjectURL(b.full); rptUrls.push(url[p.id]); } else url[p.id]=p.thumb; }
+  for(const p of photosOf(id)){ const b=await Store.getBlobs(p); if(b&&b.full){ url[p.id]=URL.createObjectURL(b.full); rptUrls.push(url[p.id]); } else url[p.id]=p.thumb; }
   ev.forEach(e=>e.result=M[e.method].calc(e.inputs));
   const fig=p=>`<figure><img src="${url[p.id]}" alt=""><figcaption>${esc(p.caption)}</figcaption></figure>`;
   const tp=photosOf(id,null), hero=tp[0]||photosOf(id)[0];
@@ -1147,19 +1196,19 @@ async function viewReport(id){ const t=getTask(id), ev=taskEvals(id); $('#view')
 const blobToData=b=>new Promise(r=>{ const f=new FileReader(); f.onload=()=>r(f.result); f.readAsDataURL(b); });
 const dataToBlob=async d=>(await fetch(d)).blob();
 async function exportJSON(taskId){ const tasks=taskId?[getTask(taskId)]:S.tasks, ids=new Set(tasks.map(t=>t.id)), photos=[];
-  for(const p of S.photos.filter(p=>ids.has(p.taskId))){ const b=await Store.get('blobs',p.id); photos.push(Object.assign({},p,{full:b?await blobToData(b.full):null,base:b&&b.base!==b.full?await blobToData(b.base):null})); }
+  for(const p of S.photos.filter(p=>ids.has(p.taskId))){ const b=await Store.getBlobs(p); photos.push(Object.assign({},p,{full:b?await blobToData(b.full):null,base:b&&b.base&&b.base!==b.full?await blobToData(b.base):null})); }
   const data={app:'ergoflow',format:1,version:VERSION,exported:new Date().toISOString(),tasks,evals:S.evals.filter(e=>ids.has(e.taskId)).map(e=>Object.assign({},e,{result:undefined})),photos};
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'})); a.download='ergoflow-'+(taskId?(tasks[0].title||'taak').replace(/[^\w-]+/g,'_').slice(0,40):'export')+'-'+today()+'.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); }
 $('#imp').onchange=async ev=>{ const f=ev.target.files[0]; if(!f) return; try{ const d=JSON.parse(await f.text()); if(d.app!=='ergoflow') throw 0;
     for(const t of d.tasks||[]) await Store.put('tasks',t); for(const e of d.evals||[]) await Store.put('evals',e);
-    for(const p of d.photos||[]){ const {full,base,...meta}=p; await Store.put('photos',meta); if(full){ const fb=await dataToBlob(full); await Store.put('blobs',{id:p.id,full:fb,base:base?await dataToBlob(base):fb}); } }
+    for(const p of d.photos||[]){ const {full,base,...meta}=p; if(typeof full==='string'){ const fb=await dataToBlob(full); await Store.putBlobs(meta,{full:fb,base:typeof base==='string'?await dataToBlob(base):fb}); } await Store.put('photos',meta); }
     await loadAll(); closeSheet(); route(); alert(T('Import gereed: ','Import complete: ')+(d.tasks||[]).length+' '+T('taken','tasks')); }
   catch(e){ alert(T('Dit is geen geldig ErgoFlow-bestand.','This is not a valid ErgoFlow file.')); } ev.target.value=''; };
 
 /* ---- boot ---- */
 async function loadAll(){ [S.tasks,S.evals,S.photos]=await Promise.all([Store.all('tasks'),Store.all('evals'),Store.all('photos')]);
   S.evals=S.evals.filter(e=>M[e.method]); S.evals.forEach(e=>{ try{ e.result=M[e.method].calc(e.inputs); }catch(err){ e.result={band:null,score:null}; } }); S.tasks.forEach(t=>{ t.triage=t.triage||{}; t.measures=t.measures||[]; }); }
-(async()=>{ document.documentElement.lang=LANG; try{ await Store.open(); await loadAll(); }catch(e){ $('#view').innerHTML=`<div class="empty">${T('Opslag is niet beschikbaar in deze browser (privémodus?).','Storage is not available in this browser (private mode?).')}</div>`; return; } route(); })();
+(async()=>{ document.documentElement.lang=LANG; setBar('ErgoFlow',null); $('#view').innerHTML=`<div class="empty">${T('Laden…','Loading…')}</div>`; try{ await Store.open(); await loadAll(); }catch(e){ $('#view').innerHTML=`<div class="empty">${T('Opslag is niet beschikbaar in deze browser (privémodus?).','Storage is not available in this browser (private mode?).')}</div>`; return; } route(); })();
 </script>
 </body>
 </html>
