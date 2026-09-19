@@ -1,0 +1,932 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B4F8A">
+<title>ErgoFlow</title>
+<style>
+:root{--bg:#EDF1F4;--surface:#fff;--ink:#13212C;--muted:#5A6A77;--line:#D2DAE1;--soft:#F5F7F9;--accent:#0B4F8A;--accent-soft:#E3EEF7;
+--g:#2C9A59;--y:#D9AE00;--o:#E57A1A;--r:#C5332A;--rad:10px;--rads:8px}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+h1,h2,h3{margin:0;font-weight:650;letter-spacing:-.01em}
+h2{font-size:1rem}h3{font-size:.95rem}
+.bar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:4px;height:52px;padding:0 8px;padding-top:env(safe-area-inset-top);background:var(--accent);color:#fff}
+.bar h1{flex:1;font-size:1.05rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:6px}
+.bar button{background:none;border:0;color:#fff;height:40px;min-width:40px;padding:0 10px;border-radius:var(--rads);display:inline-flex;align-items:center;gap:6px;font-weight:550}
+.bar button:hover{background:rgba(255,255,255,.14)}
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+#view{max-width:780px;margin:0 auto;padding:12px 12px 120px}
+#view.wide{max-width:1120px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--rad);padding:14px;margin-bottom:12px}
+.card>h2{margin-bottom:10px}
+.row{display:flex;align-items:center;gap:10px}
+.grow{flex:1;min-width:0}
+.muted{color:var(--muted)}.small{font-size:.86rem}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:var(--rads);height:40px;padding:0 14px;font-weight:550;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{background:var(--soft)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.pri:hover{filter:brightness(1.1)}
+.btn.ghost{border-color:transparent;color:var(--accent);padding:0 8px}
+.btn.danger{color:var(--r)}
+.btn.sm{height:32px;padding:0 10px;font-size:.88rem}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--line);flex:none}
+.b-g{background:var(--g)}.b-y{background:var(--y)}.b-o{background:var(--o)}.b-r{background:var(--r)}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:99px;padding:2px 10px 2px 8px;font-size:.84rem;font-weight:600;background:var(--soft);border:1px solid var(--line);white-space:nowrap;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+.tag{font-size:.76rem;font-weight:600;padding:1px 7px;border-radius:5px;background:var(--accent-soft);color:var(--accent)}
+.tag.after{background:#E4F3EA;color:#1C6B3C}
+/* lists */
+.item{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--rad);padding:12px 14px;margin-bottom:8px}
+button.item:hover{border-color:var(--accent)}
+.item .t{font-weight:600}
+.item .thumb{width:48px;height:48px;border-radius:6px;object-fit:cover;background:var(--soft);flex:none}
+.score{font-weight:700;font-size:1.05rem;min-width:44px;text-align:right}
+.empty{text-align:center;padding:36px 16px;color:var(--muted)}
+/* form */
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.fgrid .full{grid-column:1/-1}
+.fld{display:block;margin:0 0 12px}
+.fgrid .fld{margin:0}
+.lbl{display:block;font-size:.88rem;font-weight:550;margin-bottom:5px}
+.help{display:block;font-size:.8rem;color:var(--muted);margin-top:4px}
+input[type=text],input[type=number],input[type=date],select,textarea{width:100%;height:42px;border:1px solid var(--line);border-radius:var(--rads);background:var(--surface);padding:0 10px;font-size:16px}
+textarea{height:auto;min-height:72px;padding:8px 10px;resize:vertical}
+select{appearance:none;padding-right:30px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%235A6A77' stroke-width='2'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;text-overflow:ellipsis}
+.numwrap{display:flex;align-items:center;gap:8px}
+.numwrap input{max-width:130px}
+.unit{color:var(--muted);font-size:.88rem}
+.seg{display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--line);border-radius:var(--rads);overflow:hidden;background:var(--surface)}
+.seg button{flex:1 1 0;min-width:max-content;min-height:40px;border:0;border-right:1px solid var(--line);background:none;padding:6px 10px;font-size:.88rem;line-height:1.2}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed=true]{background:var(--accent);color:#fff;font-weight:600}
+.chk{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-top:1px solid var(--soft);font-size:.92rem}
+.chk input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--accent);flex:none}
+.step>h2{display:flex;gap:8px;align-items:baseline}
+.step>h2 .n{color:var(--muted);font-weight:500}
+.sub{border:1px solid var(--line);border-radius:var(--rads);padding:12px;margin-bottom:10px;background:var(--soft)}
+.sub .row{margin-bottom:8px}
+/* eval layout + rail */
+.evalgrid{display:block}
+.rail{position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -6px 20px rgba(19,33,44,.10);padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
+.rail .more{display:none;max-height:52vh;overflow:auto;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.rail.open .more{display:block}
+.railhead{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;padding:0;text-align:left}
+.big{font-size:1.9rem;font-weight:720;line-height:1;letter-spacing:-.02em}
+.big small{font-size:.8rem;font-weight:600;color:var(--muted);margin-left:4px;letter-spacing:0}
+.verdict{font-weight:650}
+.gauge{position:relative;display:flex;height:8px;border-radius:4px;overflow:visible;margin:10px 0 2px;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+.gauge span{display:block;height:100%}
+.gauge span:first-child{border-radius:4px 0 0 4px}.gauge span:nth-last-child(2){border-radius:0 4px 4px 0}
+.gauge i{position:absolute;top:-4px;width:4px;height:16px;margin-left:-2px;border-radius:2px;background:var(--ink);box-shadow:0 0 0 2px var(--surface)}
+.part{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:.86rem;margin-bottom:7px}
+.part .track{grid-column:1/-1;height:5px;border-radius:3px;background:var(--soft);overflow:hidden}
+.part .track b{display:block;height:100%;background:var(--accent);border-radius:3px;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+.rrow{display:flex;align-items:center;gap:8px;font-size:.88rem;padding:4px 0}
+.note{font-size:.88rem;margin:8px 0 0}
+.flag{font-size:.86rem;padding-left:14px;position:relative;margin:4px 0}
+.flag:before{content:"";position:absolute;left:0;top:.55em;width:6px;height:6px;border-radius:50%;background:var(--o)}
+@media(min-width:1000px){
+ .evalgrid{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:16px;align-items:start}
+ .rail{position:sticky;top:64px;border:1px solid var(--line);border-radius:var(--rad);box-shadow:none;padding:16px}
+ .rail .more{display:block;max-height:none}
+ #view{padding-bottom:40px}
+}
+/* photos */
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.ph{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;border:1px solid var(--line);background:var(--soft);padding:0}
+.ph img{width:100%;height:100%;object-fit:cover;display:block}
+.ph.add{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--accent);font-size:.82rem;font-weight:600;border-style:dashed}
+/* sheet + editor */
+#sheet{position:fixed;inset:0;z-index:40;background:rgba(19,33,44,.45);display:none;align-items:flex-end;justify-content:center}
+#sheet.on{display:flex}
+#sheet .panel{background:var(--surface);width:100%;max-width:560px;max-height:86vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+@media(min-width:700px){#sheet{align-items:center}#sheet .panel{border-radius:16px}}
+.mgroup{margin:14px 0 6px;font-size:.84rem;font-weight:600;color:var(--muted)}
+.mitem{display:block;width:100%;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--rads);padding:10px 12px;margin-bottom:6px}
+.mitem:hover{border-color:var(--accent)}
+.mitem b{display:block}
+#editor{position:fixed;inset:0;z-index:50;background:#0d1419;display:none;flex-direction:column;color:#fff;touch-action:none}
+#editor.on{display:flex}
+#editor .top,#editor .tools{display:flex;align-items:center;gap:6px;padding:8px;flex:none;overflow-x:auto}
+#editor .top{padding-top:calc(8px + env(safe-area-inset-top))}
+#editor .tools{padding-bottom:calc(8px + env(safe-area-inset-bottom));justify-content:safe center}
+#editor .tools button{padding:0 10px;font-size:.9rem}
+#editor button{background:#1d2a33;color:#fff;border:1px solid #33434f;border-radius:8px;height:40px;padding:0 12px;font-weight:550;white-space:nowrap}
+#editor button[aria-pressed=true]{background:#F2C200;color:#111;border-color:#F2C200}
+#editor .stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative}
+#editor canvas{max-width:100%;max-height:100%;touch-action:none}
+#editor .ask{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:#1d2a33;border:1px solid #33434f;border-radius:10px;padding:8px;display:none;gap:6px;align-items:center;width:min(92%,420px)}
+#editor .ask.on{display:flex}
+#editor .ask input{height:38px;color:#111}
+#editor .hint{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:.82rem;color:#c8d3db;pointer-events:none;text-shadow:0 1px 2px #000}
+#editor input.cap{flex:1;min-width:120px;background:#1d2a33;border:1px solid #33434f;color:#fff;height:40px}
+/* measures */
+.measure{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 0;border-top:1px solid var(--soft)}
+.measure .full{grid-column:1/-1}
+.measure textarea{min-height:44px}
+/* report */
+.report{background:#fff;padding:22px;border:1px solid var(--line);border-radius:var(--rad)}
+.report h1{font-size:1.45rem;margin-bottom:2px}
+.report h2{font-size:1.05rem;margin:22px 0 8px;padding-bottom:4px;border-bottom:2px solid var(--ink)}
+.report h3{margin:0 0 4px}
+.report table{width:100%;border-collapse:collapse;font-size:.88rem}
+.report th,.report td{text-align:left;padding:5px 8px 5px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.report th{font-weight:600;color:var(--muted);font-size:.8rem}
+.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 16px;font-size:.88rem;margin:12px 0}
+.meta div span{display:block;color:var(--muted);font-size:.78rem}
+.rhero{display:grid;grid-template-columns:1fr 38%;gap:16px;align-items:start}
+.rhero img{width:100%;border-radius:6px;border:1px solid var(--line)}
+.rcard{border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:12px;break-inside:avoid}
+.rcols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.rphotos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.rphotos figure{margin:0;break-inside:avoid}.rphotos img{width:100%;border-radius:4px;border:1px solid var(--line);display:block}
+.rphotos figcaption{font-size:.78rem;color:var(--muted);margin-top:2px}
+.sign{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:34px;font-size:.84rem;color:var(--muted)}
+.sign div{border-top:1px solid var(--ink);padding-top:4px}
+.ref{font-size:.76rem;color:var(--muted);margin-top:8px}
+@media(max-width:620px){.fgrid,.rcols,.rhero{grid-template-columns:1fr}.meta{grid-template-columns:1fr 1fr}.rphotos{grid-template-columns:1fr 1fr}.report{padding:14px}}
+@media print{
+ @page{size:A4;margin:14mm}
+ body{background:#fff;font-size:10.5pt}
+ .bar,.noprint,#sheet,#editor,.rail{display:none!important}
+ #view{max-width:none;padding:0;margin:0}
+ .report{border:0;padding:0}
+ .rcols{grid-template-columns:1fr 1fr}.rhero{grid-template-columns:1fr 38%}.meta{grid-template-columns:repeat(3,1fr)}.rphotos{grid-template-columns:repeat(3,1fr)}
+ .pagebreak{break-before:page}
+}
+@media(prefers-reduced-motion:no-preference){.rail .more{animation:up .16s ease-out}@keyframes up{from{opacity:0;transform:translateY(6px)}}}
+</style>
+</head>
+<body>
+<header class="bar" id="bar"></header>
+<main id="view"></main>
+<div id="sheet"><div class="panel" id="panel"></div></div>
+<div id="editor"></div>
+<input type="file" id="file" accept="image/*" multiple hidden>
+<input type="file" id="imp" accept="application/json,.json" hidden>
+<script>
+/* ===== ErgoFlow method engine: pure data + calc (no DOM) ===== */
+const BANDS = { g:0, y:1, o:2, r:3 };
+const BAND_LABEL = {
+  g:['Laag risico','Low risk'], y:['Licht verhoogd','Slightly increased'],
+  o:['Verhoogd risico','Increased risk'], r:['Hoog risico','High risk']
+};
+const worst = a => a.filter(Boolean).sort((x,y)=>BANDS[y]-BANDS[x])[0] || null;
+const upTo = (tab,x) => { for (const [lim,p] of tab) if (x<=lim) return p; return tab[tab.length-1][1]; };
+const num = (v,d=0) => { const n=parseFloat(String(v??'').replace(',','.')); return isFinite(n)?n:d; };
+const r1 = x => Math.round(x*10)/10, r2 = x => Math.round(x*100)/100;
+const optP = (f,v) => { const o=f.o.find(o=>String(o[0])===String(v)); return o? (o[2]??0) : 0; };
+
+/* ---- shared KIM pieces ---- */
+const KIM_FREQ=[[5,1],[20,1.5],[50,2],[100,2.5],[150,3],[220,3.5],[300,4],[500,5],[750,6],[1000,7],[1500,8],[2000,9],[2500,10]];
+const KIM_DIST=[[40,1],[200,1.5],[400,2],[800,2.5],[1200,3],[1800,3.5],[2500,4],[4200,5],[6300,6],[8400,7],[11000,8],[15000,9],[20000,10]];
+const KIM_MIN=[[1,1],[5,1.5],[10,2],[20,2.5],[30,3],[45,3.5],[60,4],[100,5],[150,6],[210,7],[270,8],[360,9],[480,10]];
+const kimHours = h => Math.min(10,Math.max(1,Math.ceil(num(h,1))));
+const kimBand = s => s<20?'g':s<50?'y':s<100?'o':'r';
+const KIM_SCALE = {max:150,cuts:[[20,'g'],[50,'y'],[100,'o'],[150,'r']]};
+const KIM_MEANING = {
+  g:['Fysieke overbelasting is onwaarschijnlijk.','Physical overload is unlikely.'],
+  y:['Overbelasting mogelijk bij minder belastbare personen; herontwerp kan zinvol zijn.','Overload possible for less resilient persons; redesign may be helpful.'],
+  o:['Overbelasting ook mogelijk bij normaal belastbare personen; herontwerp en preventie overwegen.','Overload also possible for normally resilient persons; consider redesign and prevention.'],
+  r:['Overbelasting is waarschijnlijk; herontwerp van de werkplek is noodzakelijk.','Overload is likely; workplace redesign is necessary.']
+};
+const ORG = {k:'org',t:'seg',l:['Werkorganisatie / afwisseling','Work organisation / variation'],def:'0',
+  o:[['0',['Goed','Good'],0],['2',['Beperkt','Restricted'],2],['4',['Ongunstig','Unfavourable'],4]],
+  h:['Goed: vaak afwisseling met andere activiteiten. Beperkt: zelden afwisseling. Ongunstig: nauwelijks afwisseling, piekbelastingen dicht op elkaar.','Good: frequent variation with other activities. Restricted: rare variation. Unfavourable: hardly any variation, tight sequence of peak loads.']};
+const SEX = {k:'sex',t:'seg',l:['Uitgevoerd door','Performed by'],def:'m',o:[['m',['Mannen','Men']],['w',['Vrouwen','Women']]]};
+const kimResult = (score,parts,extra={}) => { const b=kimBand(score); return Object.assign({score:r1(score),band:b,levels:4,scale:KIM_SCALE,parts,notes:[KIM_MEANING[b]]},extra); };
+const sumChk = (i,list) => list.reduce((s,[k,p])=>s+(i[k]?p:0),0);
+
+const M = {};   // method registry
+
+/* ================= NIOSH revised lifting equation ================= */
+const FM_ROWS=[[0.2,1,1,.95,.95,.85,.85],[0.5,.97,.97,.92,.92,.81,.81],[1,.94,.94,.88,.88,.75,.75],[2,.91,.91,.84,.84,.65,.65],[3,.88,.88,.79,.79,.55,.55],[4,.84,.84,.72,.72,.45,.45],[5,.80,.80,.60,.60,.35,.35],[6,.75,.75,.50,.50,.27,.27],[7,.70,.70,.42,.42,.22,.22],[8,.60,.60,.35,.35,.18,.18],[9,.52,.52,.30,.30,0,.15],[10,.45,.45,.26,.26,0,.13],[11,.41,.41,0,.23,0,0],[12,.37,.37,0,.21,0,0],[13,0,.34,0,0,0,0],[14,0,.31,0,0,0,0],[15,0,.28,0,0,0,0]];
+function nioshFM(F,dur,V){ const c=1+({'1':0,'2':1,'8':2}[dur]??2)*2+(V>=75?1:0);
+  if(F<=0.2) return FM_ROWS[0][c]; if(F>15) return 0;
+  for(let n=1;n<FM_ROWS.length;n++){ const a=FM_ROWS[n-1],b=FM_ROWS[n]; if(F<=b[0]) return a[c]+(b[c]-a[c])*(F-a[0])/(b[0]-a[0]); } return 0; }
+function nioshMult(H,V,D,A,coupling){
+  H=Math.max(H,25); D=Math.max(D,25);
+  return { HM:H>63?0:25/H, VM:(V>175||V<0)?0:1-0.003*Math.abs(V-75), DM:D>175?0:0.82+4.5/D, AM:A>135?0:1-0.0032*A,
+           CM:coupling==='g'?1:coupling==='f'?(V<75?.95:1):.9 }; }
+function nioshLift(l,i){
+  const LC=num(i.lc,23), L=num(l.L), V=num(l.V,75), Vd=num(l.Vd,V), D=Math.abs(Vd-V), F=num(l.F,0.2);
+  const ext=(i.one?0.6:1)*(i.two?0.85:1);
+  const at=(H,Vx,A)=>{ const m=nioshMult(num(H,25),Vx,D,num(A),l.C||'g'); m.FM=nioshFM(F,i.dur,Vx);
+    m.FIRWL=LC*m.HM*m.VM*m.DM*m.AM*m.CM*ext; m.RWL=m.FIRWL*m.FM; return m; };
+  let m=at(l.H,V,l.A);
+  if(l.ctrl){ const d=at(l.Hd,Vd,l.Ad); if(d.RWL<m.RWL||(d.RWL===m.RWL&&d.FIRWL<m.FIRWL)){ m=d; m.dest=true; } }
+  m.L=L; m.F=F; m.V=m.dest?Vd:V; m.STLI=m.RWL>0?L/m.RWL:Infinity; m.FILI=m.FIRWL>0?L/m.FIRWL:Infinity; m.name=l.name||''; return m; }
+M.niosh = {
+  id:'niosh', group:'lift', name:['NIOSH tilformule','NIOSH lifting equation'], short:'NIOSH',
+  ref:'Waters, Putz-Anderson, Garg, Fine (1993), Revised NIOSH equation for the design and evaluation of manual lifting tasks. Ergonomics 36(7). Multi-task: Composite Lifting Index (NIOSH Applications Manual, 1994). Optional one-hand / two-person multipliers per ISO 11228-1:2021.',
+  scope:['Tweehandig tillen, staand, geen dragen > enkele stappen. LI ≤ 1 laag, 1–2 verhoogd, > 2 hoog risico.','Two-handed lifting while standing, no carrying beyond a few steps. LI ≤ 1 low, 1–2 increased, > 2 high risk.'],
+  steps:[
+    {title:['Taak','Task'],fields:[
+      {k:'dur',t:'seg',l:['Duur tilwerk per dag','Lifting duration per day'],def:'8',o:[['1',['≤ 1 uur','≤ 1 h']],['2',['≤ 2 uur','≤ 2 h']],['8',['≤ 8 uur','≤ 8 h']]]},
+      {k:'lc',t:'sel',l:['Referentiegewicht','Reference mass'],def:'23',o:[['23',['23 kg – NIOSH standaard','23 kg – NIOSH standard']],['25',['25 kg – ISO, werkende mannen','25 kg – ISO, working men']],['20',['20 kg – ISO, gemengde populatie','20 kg – ISO, mixed population']],['15',['15 kg – ISO, jongeren/ouderen','15 kg – ISO, young/older workers']]]},
+      {k:'one',t:'chk',l:['Eenhandig tillen (× 0,6)','One-handed lifting (× 0.6)']},
+      {k:'two',t:'chk',l:['Tillen met twee personen (× 0,85, gewicht per persoon invullen)','Two-person lift (× 0.85, enter load per person)']}]},
+    {title:['Tilhandelingen','Lifts'],fields:[
+      {k:'lifts',t:'list',l:['Tilhandeling','Lift'],add:['Tilhandeling toevoegen','Add lift'],item:[
+        {k:'name',t:'text',l:['Omschrijving','Description']},
+        {k:'L',t:'num',l:['Gewicht last','Load weight'],unit:'kg',min:0,step:0.5,def:10},
+        {k:'F',t:'num',l:['Frequentie','Frequency'],unit:['tilh./min','lifts/min'],min:0,step:0.1,def:1},
+        {k:'H',t:'num',l:['Horizontale afstand (enkels → handen)','Horizontal distance (ankles → hands)'],unit:'cm',min:0,def:35},
+        {k:'V',t:'num',l:['Handhoogte bij oppakken','Hand height at origin'],unit:'cm',min:0,def:75},
+        {k:'Vd',t:'num',l:['Handhoogte bij neerzetten','Hand height at destination'],unit:'cm',min:0,def:100},
+        {k:'A',t:'num',l:['Draaihoek romp','Asymmetry angle'],unit:'°',min:0,max:180,def:0},
+        {k:'C',t:'seg',l:['Grip','Coupling'],def:'g',o:[['g',['Goed','Good']],['f',['Redelijk','Fair']],['p',['Slecht','Poor']]]},
+        {k:'ctrl',t:'chk',l:['Nauwkeurig plaatsen bij neerzetten','Significant control at destination']},
+        {k:'Hd',t:'num',l:['Horizontale afstand bij neerzetten','Horizontal distance at destination'],unit:'cm',def:35,show:l=>l.ctrl},
+        {k:'Ad',t:'num',l:['Draaihoek bij neerzetten','Asymmetry at destination'],unit:'°',def:0,show:l=>l.ctrl}]}]}],
+  calc(i){
+    const lifts=(i.lifts&&i.lifts.length?i.lifts:[{}]).map(l=>nioshLift(l,i));
+    const s=[...lifts].sort((a,b)=>b.STLI-a.STLI); let cli=s[0].STLI, Fsum=s[0].F;
+    for(let n=1;n<s.length;n++){ const prev=nioshFM(Fsum,i.dur,s[n].V); Fsum+=s[n].F; const cur=nioshFM(Fsum,i.dur,s[n].V);
+      cli += (cur>0&&prev>0)? s[n].FILI*(1/cur-1/prev) : Infinity; }
+    const band=cli<=1?'g':cli<=2?'o':'r', top=s[0];
+    const parts=['HM','VM','DM','AM','FM','CM'].map(k=>({l:{HM:['Horizontale afstand','Horizontal distance'],VM:['Tilhoogte','Vertical height'],DM:['Verplaatsing','Travel distance'],AM:['Draaiing','Asymmetry'],FM:['Frequentie/duur','Frequency/duration'],CM:['Grip','Coupling']}[k],txt:'× '+r2(top[k]).toFixed(2).replace('.',tr_(',','.')),pen:1-top[k]}));
+    return {score:isFinite(cli)?r2(cli):Infinity,label:lifts.length>1?'CLI':'LI',band,levels:3,scale:{max:3,cuts:[[1,'g'],[2,'o'],[3,'r']]},parts,
+      partsTitle:lifts.length>1?['Reductiefactoren zwaarste tilhandeling','Reduction factors of the worst lift']:['Reductiefactoren (langere balk = ongunstiger)','Reduction factors (longer bar = worse)'],
+      rows:lifts.map((m,n)=>({l:(m.name||('#'+(n+1)))+(m.dest?' ⇣':''),v:'RWL '+r1(m.RWL)+' kg · LI '+(isFinite(m.STLI)?r2(m.STLI):'∞'),band:m.STLI<=1?'g':m.STLI<=2?'o':'r'})),
+      notes:[band==='g'?['Aanvaardbaar voor vrijwel alle gezonde werknemers.','Acceptable for nearly all healthy workers.']:band==='o'?['Verhoogd risico op rugklachten voor een deel van de werknemers; maatregelen nemen.','Increased risk of low-back complaints for part of the workforce; take measures.']:['Sterk verhoogd risico; direct maatregelen nemen.','Strongly increased risk; take measures immediately.']].concat(top.RWL===0?[['Een factor is 0: de tilsituatie valt buiten de grenzen van de formule (bijv. H > 63 cm, V > 175 cm, draaiing > 135° of te hoge frequentie).','A multiplier is 0: the lift is outside the limits of the equation (e.g. H > 63 cm, V > 175 cm, asymmetry > 135° or frequency too high).']]:[])};
+  }
+};
+
+/* ================= KIM-LHC ================= */
+const LHC_W=[[5,4,6],[10,6,9],[15,8,12],[20,11,25],[25,15,75],[30,25,85],[35,35,100],[40,75,100],[1e9,100,100]];
+const LHC_POST={UU:0,MU:3,MM:5,DU:7,KU:9,DM:10,KM:13,DD:15,DK:18,KK:20};
+const POSTO=[['U',['Rechtop','Upright']],['M',['Licht gebogen / armen geheven','Slightly bent / arms raised']],['D',['Diep gebogen','Deep bend']],['K',['Gehurkt / geknield','Squatting / kneeling']]];
+const OCC3=(k,l,a,b)=>({k,t:'seg',l,def:'0',o:[['0',['Nee','No'],0],['1',['Soms','Occasionally'],a],['2',['Vaak / steeds','Frequently'],b]]});
+M.kimlhc = {
+  id:'kimlhc', group:'lift', name:['KIM Tillen, houden, dragen','KIM Lifting, holding, carrying'], short:'KIM-LHC',
+  ref:'BAuA / ASER / ArbMedErgo / ebus: Key Indicator Method KIM-LHC, version 12.5 (04/2019).',
+  scope:['Handmatig tillen, vasthouden en dragen van lasten ≥ 3 kg. Dragen > 10 m: ook KIM-BM.','Manual lifting, holding and carrying of loads ≥ 3 kg. Carrying > 10 m: also use KIM-BM.'],
+  steps:[
+    {title:['Tijd en last','Time and load'],fields:[
+      {k:'freq',t:'num',l:['Aantal handelingen per werkdag','Number of operations per working day'],min:1,def:100},
+      SEX,
+      {k:'w',t:'num',l:['Effectief lastgewicht','Effective load weight'],unit:'kg',min:3,step:0.5,def:10,h:['Kantelen ≈ 50 % van het gewicht; met twee personen dragen ≈ 60 % per persoon.','Tilting ≈ 50 % of the weight; carrying in pairs ≈ 60 % per person.']},
+      {k:'hand',t:'sel',l:['Hanteren van de last','Load handling'],def:'0',o:[['0',['Tweehandig en symmetrisch','Both hands, symmetrical'],0],['2',['Tijdelijk eenhandig of asymmetrisch','Temporarily one-handed or asymmetrical'],2],['4',['Overwegend eenhandig of instabiel zwaartepunt','Predominantly one hand or unstable load centre'],4]]}]},
+    {title:['Lichaamshouding','Body posture'],fields:[
+      {k:'p1',t:'sel',l:['Houding bij oppakken','Posture at pick-up'],def:'U',o:POSTO},
+      {k:'p2',t:'sel',l:['Houding bij neerzetten','Posture at set-down'],def:'U',o:POSTO},
+      OCC3('tw',['Romp gedraaid of zijwaarts gebogen','Trunk twisted or bent sideways'],1,3),
+      OCC3('far',['Last of handen ver van het lichaam','Load or hands far from the body'],1,3),
+      OCC3('arm',['Armen geheven, handen tussen elleboog- en schouderhoogte','Arms raised, hands between elbow and shoulder height'],0.5,1),
+      OCC3('ab',['Handen boven schouderhoogte','Hands above shoulder height'],1,2)]},
+    {title:['Omstandigheden','Conditions'],fields:[
+      OCC3('rom',['Hand/arm aan grens van bewegingsbereik','Hand/arm at limit of movement range'],1,2),
+      {k:'grip',t:'seg',l:['Krachtoverdracht / grip','Force transfer / grip'],def:'0',o:[['0',['Goed','Good'],0],['1',['Beperkt','Restricted'],1],['2',['Sterk gehinderd','Considerably hindered'],2]]},
+      {k:'space',t:'seg',l:['Ruimte en ondergrond','Space and floor'],def:'0',o:[['0',['Goed','Good'],0],['1',['Beperkt','Restricted'],1],['2',['Ongunstig','Unfavourable'],2]]},
+      {k:'hold',t:'sel',l:['Vasthouden / dragen','Holding / carrying'],def:'0',o:[['0',['Niet of kort','None or short'],0],['2',['> 5–10 s vasthouden of > 2–5 m dragen','Holding > 5–10 s or carrying > 2–5 m'],2],['5',['> 10 s vasthouden of > 5 m dragen','Holding > 10 s or carrying > 5 m'],5]]},
+      {k:'amb',t:'chk',l:['Ongunstig klimaat: hitte, tocht, kou, nat','Adverse ambient conditions: heat, draught, cold, wet']},
+      {k:'clo',t:'chk',l:['Belemmerende kleding of PBM','Impairing clothes or PPE']},
+      ORG]}],
+  calc(i){ const f=this.steps.flatMap(s=>s.fields), F=k=>f.find(x=>x.k===k), w=num(i.w,3);
+    const row=LHC_W.find(r=>w<=r[0]), load=row[i.sex==='w'?2:1], t=upTo(KIM_FREQ,num(i.freq,1));
+    const pk=[i.p1||'U',i.p2||'U'].sort().join(''), add=Math.min(6,optP(F('tw'),i.tw)+optP(F('far'),i.far)+optP(F('arm'),i.arm)+optP(F('ab'),i.ab));
+    const post=(LHC_POST[pk]??0)+add, cond=optP(F('rom'),i.rom)+optP(F('grip'),i.grip)+optP(F('space'),i.space)+optP(F('hold'),i.hold)+(i.amb?1:0)+(i.clo?1:0);
+    const hand=optP(F('hand'),i.hand), org=optP(ORG,i.org), sum=load+hand+post+cond+org;
+    return kimResult(t*sum,[{l:['Lastgewicht','Load weight'],v:load,max:100},{l:['Hanteren','Handling'],v:hand,max:4},{l:['Houding','Posture'],v:post,max:26},{l:['Omstandigheden','Conditions'],v:cond,max:13},{l:['Werkorganisatie','Organisation'],v:org,max:4}],{formula:t+' × '+r1(sum)}); }
+};
+
+/* ================= KIM-PP ================= */
+const PP_W=[50,100,200,300,400,600,800,1000,1300,1e9];
+const PP_DEV={ // points per weight class; null beyond = 100
+  wb:[3,5,10,50,100,100,100,100,100,100], st:[2,3,6,12,50,100,100,100,100,100], bin2:[2.5,4,7,50,100,100,100,100,100,100],
+  sw:[2.5,3,4,5,7,12,50,100,100,100], bin4:[3,4,6,8,12,50,100,100,100,100], fx1:[1,1,2,3,4,6,10,15,50,100], fx2:[1,1,1.5,2,3,5,8,12,50,100],
+  pt:[1,1,1.5,2,2.5,4,7,10,50,100], oc:[1,1,1.5,2,2.5,4,7,10,20,50], cr:[2,2.5,3.5,4.5,6,10,15,50,100,100]};
+const PP_WAYCOL={wb:0,st:1,bin2:1,oc:-1,cr:-1}; const PP_WAY=[[0,0,0],[0,0,1],[0,1,2],[1,2,3],[3,5,6]];
+M.kimpp = {
+  id:'kimpp', group:'push', name:['KIM Duwen en trekken','KIM Pushing and pulling'], short:'KIM-PP',
+  ref:'BAuA / ASER / ArbMedErgo / ebus: Key Indicator Method KIM-PP, version 12.5 (04/2019).',
+  scope:['Handmatig verplaatsen van karren, rolcontainers, palletwagens, hangbanen en kranen.','Moving trolleys, roll containers, pallet trucks, overhead conveyors and cranes by muscle power.'],
+  steps:[
+    {title:['Tijd en middel','Time and device'],fields:[
+      {k:'basis',t:'seg',l:['Tijdsmaat','Time basis'],def:'d',o:[['d',['Afstand','Distance']],['t',['Duur','Duration']]]},
+      {k:'dist',t:'num',l:['Totale afstand per werkdag','Total distance per working day'],unit:'m',min:0,def:400,show:i=>i.basis!=='t'},
+      {k:'mins',t:'num',l:['Totale duur per werkdag','Total duration per working day'],unit:'min',min:0,def:10,show:i=>i.basis==='t'},
+      {k:'dev',t:'sel',l:['Transportmiddel','Transport device'],def:'sw',o:[['wb',['Kruiwagen','Wheelbarrow']],['st',['Steekwagen','Sack truck']],['bin2',['Tweewielige afvalcontainer','Two-wheel waste bin']],['sw',['Kar/rolcontainer, alleen zwenkwielen','Carriage/roll container, swivel castors only']],['bin4',['Vierwielige afvalcontainer (eenvoudige lagers)','Four-wheel waste container (simple bearings)']],['fx1',['Kar met bokwielen – smal/hoog (bv. heftafel)','Carriage with fixed castors – narrow/tall (e.g. lift trolley)']],['fx2',['Kar met bokwielen of vergrendelbare zwenkwielen','Carriage with fixed or lockable swivel castors']],['pt',['Handpalletwagen','Hand pallet truck']],['oc',['Hangbaan','Overhead conveyor']],['cr',['Bovenloopkraan','Overhead crane']]]},
+      {k:'w',t:'num',l:['Gewicht incl. transportmiddel','Weight incl. transport device'],unit:'kg',min:0,def:200},
+      SEX,{k:'pair',t:'chk',l:['Duwen/trekken met twee personen (× 0,7)','Pushing/pulling in pairs (× 0.7)']}]},
+    {title:['Route','Driveway'],fields:[
+      {k:'way',t:'sel',l:['Ondergrond','Driveway'],def:'0',o:[['0',['Volledig vlak, glad, hard, droog','Completely level, smooth, solid, dry']],['1',['Grotendeels glad en vlak, kleine beschadigingen','Mostly smooth and level, small damaged spots']],['2',['Klinkers/beton/asfalt, lichte helling, verlaagde stoeprand','Cobbles/concrete/asphalt mix, slight inclination, dropped kerb']],['3',['Grove klinkers, hard zand, kleine randen/drempels','Roughly cobbled, hard sand, small edges/sills']],['4',['Aarde, kuilen, sterke vervuiling, drempels','Earth, potholes, heavy soiling, landings, sills']]]},
+      {k:'inc',t:'sel',l:['Hellingen','Inclinations'],def:'0',o:[['0',['Geen of ≤ 2°','None or ≤ 2°'],0],['5',['2–4° (4–8 %)','2–4° (4–8 %)'],5],['10',['5–10° (9–18 %)','5–10° (9–18 %)'],10],['25',['Trappen of > 10°','Stairs or > 10°'],25]]}]},
+    {title:['Omstandigheden en middel','Conditions and device'],fields:[
+      {k:'c1',t:'chk',l:['Regelmatig sterk verhoogde startkrachten (wegzakken, klemmen)','Regularly significantly increased starting forces (sinking, wedging)']},
+      {k:'c2',t:'seg',l:['Vaak stoppen','Frequent stops'],def:'0',o:[['0',['Nee','No'],0],['1',['Zonder remmen','Without braking'],1],['3',['Met remmen','With braking'],3]]},
+      {k:'c3',t:'chk',l:['Veel bochten, richtingsveranderingen of manoeuvreren','Many changes of direction, curves or manoeuvring']},
+      {k:'c4',t:'chk',l:['Nauwkeurig positioneren of route precies volgen','Precise positioning or driveway must be followed precisely']},
+      {k:'c5',t:'chk',l:['Verhoogde loopsnelheid (ca. 1,0–1,3 m/s)','Increased movement speed (approx. 1.0–1.3 m/s)']},
+      {k:'d1',t:'chk',l:['Geen geschikte handgrepen','No suitable handles']},
+      {k:'d2',t:'chk',l:['Geen rem bij hellingen > 2°','No brake on inclinations > 2°']},
+      {k:'d3',t:'chk',l:['Wielen niet afgestemd op ondergrond','Unadjusted castors (e.g. too small for floor)']},
+      {k:'d4',t:'chk',l:['Defecte wielen (versleten, stroef, zachte band)','Defective castors (worn, stiff, low pressure)']}]},
+    {title:['Houding en organisatie','Posture and organisation'],fields:[
+      {k:'post',t:'sel',l:['Lichaamshouding','Body posture'],def:'3',o:[['3',['Romp rechtop, vrije duwhoogte, benen ongehinderd','Trunk upright, free force height, legs unhindered'],3],['5',['Licht voorover of eenzijdig trekken, duwhoogte 0,9–1,2 m','Inclined or one-sided pulling, fixed height 0.9–1.2 m'],5],['8',['Ongunstig: duwhoogte < 0,9 of > 1,2 m, eenzijdig, zicht of benen gehinderd, vaak gedraaid','Awkward: height < 0.9 or > 1.2 m, one-sided, view or legs hindered, frequent twisting'],8]]},
+      ORG]}],
+  calc(i){ const dev=i.dev||'sw', w=num(i.w), wi=PP_W.findIndex(x=>w<=x), load=PP_DEV[dev][wi];
+    const t=i.basis==='t'?upTo(KIM_MIN,num(i.mins,1)):upTo(KIM_DIST,num(i.dist,1));
+    const col=PP_WAYCOL[dev]??2, way=(col<0?0:PP_WAY[+i.way||0][col])+num(i.inc);
+    const cond=Math.min(4,sumChk(i,[['c1',3],['c3',3],['c4',1],['c5',2]])+num(i.c2)), prop=Math.min(4,sumChk(i,[['d1',2],['d2',3],['d3',2],['d4',2]]));
+    const post=num(i.post,3), org=optP(ORG,i.org), sum=load+way+cond+prop+post+org, k=(i.sex==='w'?1.3:1)*(i.pair?0.7:1);
+    return kimResult(t*sum*k,[{l:['Gewicht / middel','Weight / device'],v:load,max:100},{l:['Route','Driveway'],v:way,max:31},{l:['Omstandigheden','Conditions'],v:cond,max:4},{l:['Eigenschappen middel','Device properties'],v:prop,max:4},{l:['Houding','Posture'],v:post,max:8},{l:['Werkorganisatie','Organisation'],v:org,max:4}],{formula:t+' × '+r1(sum)+(k!==1?' × '+r2(k):'')}); }
+};
+
+/* ================= KIM-MHO ================= */
+const LVL4=[['0',['Geen','None']],['1',['Laag (≤ 15 % Fmax)','Low (≤ 15 % Fmax)']],['2',['Matig (≤ 30 %)','Moderate (≤ 30 %)']],['3',['Hoog (≤ 50 %)','High (≤ 50 %)']],['4',['Zeer hoog (≤ 80 %)','Very high (≤ 80 %)']],['5',['Piekkracht (> 80 %) / slaan','Peak force (> 80 %) / hitting']]];
+const MHO_HOLD={1:[1.5,3,5.5],2:[2.5,4.5,9],3:[3.5,7,14],4:[5.5,11,22],5:[35,100,100]};          // ≤15, 16–30, 31–60 s/min
+const MHO_MOVE={1:[0.5,1,2.5,5,7],2:[0.5,2,4,7.5,11],3:[1,3,6,12,18],4:[1.5,5,10,19,19],5:[8,30,100,100,100]}; // <5,5–15,16–30,31–60,61–90 /min
+const HOLDCAT=[['0',['≤ 15 s/min','≤ 15 s/min']],['1',['16–30 s/min','16–30 s/min']],['2',['31–60 s/min','31–60 s/min']]];
+const MOVECAT=[['0',['< 5 /min','< 5 /min']],['1',['5–15 /min','5–15 /min']],['2',['16–30 /min','16–30 /min']],['3',['31–60 /min','31–60 /min']],['4',['61–90 /min','61–90 /min']]];
+const forceFields=(lv,hc,mc,dm='1')=>[
+  {k:'hl',t:'sel',l:['Vasthouden (statisch ≥ 4 s): krachtniveau','Holding (static ≥ 4 s): force level'],def:'0',o:lv},
+  {k:'hc',t:'seg',l:['Gemiddelde houdtijd','Average holding time'],def:'0',o:hc,show:i=>i.hl&&i.hl!=='0'},
+  {k:'ml',t:'sel',l:['Bewegen: krachtniveau','Moving: force level'],def:dm,o:lv},
+  {k:'mc',t:'sel',l:['Bewegingsfrequentie','Movement frequency'],def:'1',o:mc,show:i=>i.ml&&i.ml!=='0'},
+  {k:'fx',t:'num',l:['Extra krachtpunten (overige krachtsoorten in de cyclus)','Extra force points (other force types in the cycle)'],min:0,def:0}];
+M.kimmho = {
+  id:'kimmho', group:'hand', name:['KIM Handmatige werkprocessen','KIM Manual handling operations'], short:'KIM-MHO',
+  ref:'BAuA / ASER / ArbMedErgo / ebus: Key Indicator Method KIM-MHO, version 12.5 (04/2019).',
+  scope:['Repeterend werk met vinger-hand-armsysteem, meestal stationair. Beoordeel de zwaarst belaste hand.','Repetitive work with the finger-hand-arm system, mostly stationary. Assess the most loaded hand.'],
+  steps:[
+    {title:['Tijd en kracht','Time and force'],fields:[{k:'hrs',t:'num',l:['Duur van de taak per werkdag','Duration of this activity per working day'],unit:['uur','h'],min:0,max:10,step:0.5,def:4},...forceFields(LVL4,HOLDCAT,MOVECAT)]},
+    {title:['Grip, houding, omstandigheden','Grip, posture, conditions'],fields:[
+      {k:'grip',t:'seg',l:['Krachtoverdracht / grip','Force transfer / grip'],def:'0',o:[['0',['Optimaal','Optimum'],0],['2',['Beperkt','Restricted'],2],['4',['Sterk gehinderd','Hindered'],4]]},
+      {k:'arm',t:'sel',l:['Hand-/armstand en beweging','Hand/arm position and movement'],def:'0',o:[['0',['Goed: gewrichten in middenstand, armsteun mogelijk','Good: joints in mid range, arm rest possible'],0],['1',['Beperkt: soms eindstanden of lang statisch','Restricted: occasionally at limits or long static'],1],['2',['Ongunstig: vaak eindstanden of lang statisch','Unfavourable: frequently at limits or long static'],2],['3',['Slecht: voortdurend eindstanden of statisch','Poor: constantly at limits or static'],3]]},
+      {k:'cond',t:'seg',l:['Werkomstandigheden (zicht, klimaat, lawaai)','Working conditions (vision, climate, noise)'],def:'0',o:[['0',['Goed','Good'],0],['1',['Beperkt','Restricted'],1],['2',['Ongunstig','Unfavourable'],2]]},
+      {k:'post',t:'sel',l:['Lichaamshouding','Body posture'],def:'2',o:[['0',['Afwisselend zitten/staan/lopen, romp vrijwel rechtop','Alternating sitting/standing/walking, trunk nearly upright'],0],['2',['Overwegend zitten of staan, soms draaien/reiken','Predominantly sitting or standing, occasional twisting/reaching'],2],['4',['Uitsluitend staan of zitten, romp duidelijk voorover, vaak draaien/reiken','Exclusively standing or sitting, trunk clearly inclined, frequent twisting/reaching'],4],['6',['Sterk voorover, knielen/hurken/liggen, gefixeerde houding, steeds boven schouderhoogte','Severely inclined, kneeling/squatting/lying, fixed posture, constantly above shoulder'],6]]},
+      ORG]}],
+  calc(i){ const hold=(MHO_HOLD[+i.hl]||[0,0,0])[+i.hc||0], move=(MHO_MOVE[+i.ml]||[0,0,0,0,0])[+i.mc||0], force=hold+move+num(i.fx);
+    const t=kimHours(i.hrs), grip=num(i.grip), arm=num(i.arm), cond=num(i.cond), post=num(i.post), org=optP(ORG,i.org), sum=force+grip+arm+cond+post+org;
+    return kimResult(t*sum,[{l:['Krachtuitoefening','Force exertion'],v:force,max:30},{l:['Grip','Grip'],v:grip,max:4},{l:['Hand-/armstand','Hand/arm position'],v:arm,max:3},{l:['Omstandigheden','Conditions'],v:cond,max:2},{l:['Lichaamshouding','Body posture'],v:post,max:6},{l:['Werkorganisatie','Organisation'],v:org,max:4}],{formula:t+' × '+r1(sum)}); }
+};
+
+/* ================= KIM-BF ================= */
+const LVLBF=[['0',['Geen','None']],['2',['Matig (≤ 30 % Fmax)','Moderate (≤ 30 % Fmax)']],['3',['Hoog (≤ 50 %)','High (≤ 50 %)']],['4',['Zeer hoog (≤ 80 %)','Very high (≤ 80 %)']],['5',['Piekkracht (> 80 %)','Peak force (> 80 %)']]];
+const BF_HOLD={2:[6,12,18],3:[8,17,25],4:[15,32,100],5:[25,100,100]}, BF_MOVE={2:[1.5,6,12,18],3:[2,8,17,25],4:[4,15,32,100],5:[6,25,50,100]};
+M.kimbf = {
+  id:'kimbf', group:'force', name:['KIM Lichaamskrachten','KIM Whole-body forces'], short:'KIM-BF',
+  ref:'BAuA / ASER / ArbMedErgo / ebus: Key Indicator Method KIM-BF, version 12.5 (04/2019).',
+  scope:['Grote krachten met het hele lichaam: scheppen, zwaar handgereedschap, hendels, lasten over rollenbanen, slepen.','Large whole-body forces: shovelling, heavy hand-guided tools, levers, loads on roller tracks, dragging.'],
+  steps:[
+    {title:['Tijd en kracht','Time and force'],fields:[{k:'mins',t:'num',l:['Totale duur (min) of aantal herhalingen per werkdag','Total duration (min) or number of repetitions per working day'],min:0,def:60},SEX,
+      ...forceFields(LVLBF,[['0',['≤ 15 s','≤ 15 s']],['1',['16–30 s','16–30 s']],['2',['31–45 s','31–45 s']]],[['0',['< 5','< 5']],['1',['5–15','5–15']],['2',['16–30','16–30']],['3',['31–45','31–45']]],'2')]},
+    {title:['Houding en omstandigheden','Posture and conditions'],fields:[
+      {k:'sym',t:'sel',l:['Symmetrie van de krachtuitoefening','Symmetry of force application'],def:'0',o:[['0',['Tweehandig en symmetrisch','Both hands, symmetrical'],0],['2',['Tijdelijk eenhandig of asymmetrisch','Temporarily one-handed or asymmetrical'],2],['4',['Overwegend eenhandig','Predominantly one hand'],4]]},
+      {k:'post',t:'sel',l:['Lichaamshouding','Body posture'],def:'0',o:[['0',['Rechtop tot licht voorover (< 20°), niet gedraaid','Upright to slightly inclined (< 20°), no twisting'],0],['3',['Voorover 20–60°, soms draaien, soms handen boven schouder/ver weg','Inclined 20–60°, occasional twisting, hands occasionally above shoulder/far'],3],['6',['Voorover > 60° of achterover, vaak draaien, vaak boven schouder, liggend','Inclined > 60° or backward, frequent twisting, frequently above shoulder, lying'],6],['9',['Sterk voorover én gedraaid, steeds gedraaid, hurken/knielen, steeds boven schouder','Severe inclination plus torsion, constant twisting, squatting/kneeling, constantly above shoulder'],9]]},
+      OCC3('rom',['Hand/arm aan grens van bewegingsbereik','Hand/arm at limit of movement range'],1,2),
+      {k:'grip',t:'seg',l:['Krachtoverdracht / grip','Force transfer / grip'],def:'0',o:[['0',['Goed','Good'],0],['1',['Beperkt','Restricted'],1],['2',['Sterk gehinderd','Hindered'],2]]},
+      {k:'amb',t:'seg',l:['Hitte, kou, trillingen','Heat, cold, vibration'],def:'0',o:[['0',['Nee','No'],0],['1',['Ongunstig','Adverse'],1],['2',['Extreem','Extreme'],2]]},
+      {k:'space',t:'seg',l:['Ruimte en stabiliteit','Space and stability'],def:'0',o:[['0',['Goed','Good'],0],['1',['Beperkt','Restricted'],1],['2',['Ongunstig','Unfavourable'],2]]},
+      {k:'clo',t:'chk',l:['Zware of belemmerende beschermende kleding','Heavy or restrictive protective clothing']},
+      ORG]}],
+  calc(i){ const hold=(BF_HOLD[+i.hl]||[0,0,0])[+i.hc||0], move=(BF_MOVE[+i.ml]||[0,0,0,0])[Math.min(3,+i.mc||0)], force=(hold+move+num(i.fx))*(i.sex==='w'?1.5:1);
+    const t=upTo(KIM_MIN,num(i.mins,1)), sym=num(i.sym), post=num(i.post), cond=num(i.rom)+num(i.grip)+num(i.amb)+num(i.space)+(i.clo?2:0), org=optP(ORG,i.org), sum=force+sym+post+cond+org;
+    return kimResult(t*sum,[{l:['Krachtuitoefening','Force exertion'],v:force,max:100},{l:['Symmetrie','Symmetry'],v:sym,max:4},{l:['Houding','Posture'],v:post,max:9},{l:['Omstandigheden','Conditions'],v:cond,max:10},{l:['Werkorganisatie','Organisation'],v:org,max:4}],{formula:t+' × '+r1(sum)}); }
+};
+
+/* ================= KIM-ABP ================= */
+const SHARE=[['0',['Niet','None']],['1',['≤ ¼','≤ ¼']],['2',['≤ ½','≤ ½']],['3',['≤ ¾','≤ ¾']],['4',['> ¾','> ¾']]];
+const abpRow=(k,l,pts)=>({k,t:'seg',l,def:'0',o:SHARE,pts});
+const ABP_A=[abpRow('a1',['Rug rechtop (≤ 20°), staand/hurkend/knielend','Back upright (≤ 20°), standing/squatting/kneeling'],[2,4,6,8]),abpRow('a2',['Romp matig voorover (20–60°) of achterover','Trunk moderately inclined (20–60°) or backward'],[7,15,22,30]),abpRow('a3',['Romp sterk voorover (> 60°)','Trunk severely inclined (> 60°)'],[10,20,30,40]),abpRow('a4',['Gedwongen zithouding, voorovergebogen','Forced sitting posture, inclined forward'],[3,6,9,12]),abpRow('a5',['Zitten, afwisselen met staan/lopen niet mogelijk','Sitting, alternation with standing/walking not possible'],[2,4,6,8]),abpRow('a6',['Variabel zitten, afwisselen mogelijk','Variable sitting, alternation possible'],[0.5,1,1.5,2])];
+const ABP_B=[abpRow('b1',['Armen geheven, handen boven schouderhoogte','Arms raised, hands above shoulder level'],[10,20,30,40]),abpRow('b2',['Armen geheven onder schouderhoogte of ver van lichaam, niet ondersteund','Arms raised below shoulder level or far from body, unsupported'],[6,12,18,24]),abpRow('b3',['Liggend werken (rug of buik) met armen geheven','Lying (back or prone) with arms raised'],[7,14,21,28])];
+const ABP_C=[abpRow('c1',['Voortdurend staan (ook met enkele stappen)','Constant standing (also with a few steps)'],[2,4,6,8]),abpRow('c2',['Knielen, hurken of kleermakerszit','Kneeling, squatting or sitting cross-legged'],[10,20,30,40])];
+M.kimabp = {
+  id:'kimabp', group:'posture', name:['KIM Lichaamshoudingen','KIM Awkward body postures'], short:'KIM-ABP',
+  ref:'BAuA / ASER / ArbMedErgo / ebus: Key Indicator Method KIM-ABP, version 12.5 (04/2019).',
+  scope:['Statische of gedwongen houdingen (≥ 1 min aaneen of herhaald ≥ 10 s) zonder of met weinig kracht. Hoogste regio bepaalt het risico.','Static or forced postures (≥ 1 min at a time or repeated ≥ 10 s) with little or no force. The highest region determines the risk.'],
+  steps:[
+    {title:['Tijd','Time'],fields:[{k:'hrs',t:'num',l:['Duur van de taak per werkdag','Duration of this activity per working day'],unit:['uur','h'],min:0,max:10,step:0.5,def:4}]},
+    {title:['A · Rug — aandeel van de tijd','A · Back — share of the time'],fields:ABP_A},
+    {title:['B · Schouders en bovenarmen','B · Shoulders and upper arms'],fields:ABP_B},
+    {title:['C · Knieën en benen','C · Knees and legs'],fields:ABP_C},
+    {title:['Omstandigheden','Conditions'],fields:[
+      OCC3('tw',['Romp gedraaid of zijwaarts gebogen','Trunk twisted or bent sideways'],1,2),
+      {k:'head',t:'chk',l:['Hoofd achterover, sterk voorover of steeds draaiend','Head inclined backward, severely forward or constantly turning']},
+      {k:'sup',t:'chk',l:['Bovenlichaam kan bij vooroverbuigen niet worden ondersteund','Upper body cannot be supported when inclined forward']},
+      {k:'nar',t:'chk',l:['Vaak of steeds krappe bewegingsruimte','Narrow space for movement, frequently to constantly']},
+      {k:'stab',t:'chk',l:['Beperkte stabiliteit, ongelijke vloer','Restricted stability, uneven floor']},
+      {k:'wet',t:'chk',l:['Vocht, kou, sterke tocht','Moisture, cold, strong draughts']},
+      {k:'vib',t:'chk',l:['Sterke schokken/trillingen','Strong shocks / vibrations']},
+      {k:'conc',t:'chk',l:['Zeer hoge mentale concentratie','Very high mental concentration']}]}],
+  calc(i){ const t=kimHours(i.hrs), sum=rows=>rows.reduce((s,f)=>s+(+i[f.k]?f.pts[+i[f.k]-1]:0),0);
+    let A=sum(ABP_A),B=sum(ABP_B),C=sum(ABP_C); const tw=num(i.tw);
+    if(A>0) A+=tw+(i.head?1:0)+(i.sup?2:0)+(i.nar?2:0)+(i.stab?1:0)+(i.wet?1:0)+(i.vib?1:0)+(i.conc?1:0);
+    if(B>0) B+=(i.head?1:0)+(i.nar?2:0)+(i.stab?1:0)+(i.wet?1:0)+(i.vib?1:0)+(i.conc?1:0);
+    if(C>0) C+=(tw===2?1:0)+(i.nar?2:0)+(i.stab?1:0);
+    const sc=[A,B,C].map(x=>t*x), top=Math.max(...sc);
+    return kimResult(top,[],{formula:t+' × '+r1(Math.max(A,B,C)),rows:[['A · Rug','A · Back'],['B · Schouders/bovenarmen','B · Shoulders/upper arms'],['C · Knieën/benen','C · Knees/legs']].map((l,n)=>({l,v:r1(sc[n]),band:kimBand(sc[n])}))}); }
+};
+
+/* ================= KIM-BM ================= */
+const BM_LOAD=[['0',['Geen / < 3 kg','None / < 3 kg']],['1','3–10 kg'],['2','> 10–15 kg'],['3','> 15–20 kg'],['4','> 20–25 kg'],['5','> 25–30 kg'],['6','> 30–35 kg'],['7','> 35 kg']];
+const BM_MOVE={w1:[4,6,8,10,12,14,25,35],w2:[8,10,12,14,16,18,30,40],w3:[12,14,16,18,20,22,35,50],c1:[10,12,14,16,18,20,35,50],c2:[12,14,16,18,20,22,35,50],c3:[24,26,28,30,32,34,40,50],
+  s1:[18,20,22,24,26,50,100,100],s2:[24,26,28,30,50,100,100,100],s3:[30,32,34,50,100,100,100,100],l1:[24,26,50,100,100,100,100,100],l2:[30,32,50,100,100,100,100,100],cr:[24,26,50,100,100,100,100,100]};
+const bmClass=l=>l<=2?0:l<=5?1:2;   // 3–15 / >15–30 / >30 kg
+M.kimbm = {
+  id:'kimbm', group:'force', name:['KIM Lichaamsbeweging','KIM Body movement'], short:'KIM-BM',
+  ref:'BAuA / ASER / ArbMedErgo / ebus: Key Indicator Method KIM-BM, version 12.5 (04/2019).',
+  scope:['Veel lopen, klimmen, traplopen, ladders of kruipen, met of zonder last; of voortbewegen op spierkracht (fiets).','Much walking, climbing, stairs, ladders or crawling, with or without load; or moving by muscle power (cycling).'],
+  steps:[
+    {title:['Tijd en beweging','Time and movement'],fields:[
+      {k:'mins',t:'num',l:['Totale duur per werkdag','Total duration per working day'],unit:'min',min:0,def:60},SEX,
+      {k:'mode',t:'seg',l:['Soort beweging','Kind of movement'],def:'a',o:[['a',['Te voet','On foot']],['b',['Rijdend op spierkracht','Driving by muscle power']]]},
+      {k:'mv',t:'sel',l:['Type beweging','Type of movement'],def:'w2',show:i=>i.mode!=='b',o:[['w1',['Lopen – langzaam','Walking – slowly']],['w2',['Lopen – normaal (3–5 km/u)','Walking – moderate (3–5 km/h)']],['w3',['Lopen – snel','Walking – quickly']],['c1',['Helling < 5°','Climbing < 5°']],['c2',['Helling 5–15°','Climbing 5–15°']],['c3',['Helling > 15°','Climbing > 15°']],['s1',['Normale trap','Normal stairs']],['s2',['Steile trap (35–50°)','Steep stairs (35–50°)']],['s3',['Zeer steile trap (> 50°)','Very steep stairs (> 50°)']],['l1',['Ladder 65–75°','Ladder 65–75°']],['l2',['Verticaal klimmen (> 80°)','Vertical climbing (> 80°)']],['cr',['Kruipen / sterk gebukt lopen','Crawling / walking with severe stoop']]]},
+      {k:'ld',t:'sel',l:['Gedragen last','Carried load'],def:'0',o:BM_LOAD,show:i=>i.mode!=='b'},
+      {k:'loc',t:'sel',l:['Plaats van de last','Location of the load'],def:'0',show:i=>i.mode!=='b'&&+i.ld>0,o:[['0',['Dicht op het lichaam in draagstel/rugzak','Close to body in carrying frame/backpack']],['1',['Dicht bij het lichaam in de handen of op één schouder','Close to body in hands or on one shoulder']],['2',['Ver van het lichaam in de handen','At a distance from the body in the hands']]]},
+      OCC3('tw',['Romp voorover, gedraaid of zijwaarts gebogen','Trunk inclined, twisted or bent sideways'],1,2),
+      {k:'cond',t:'sel',l:['Bewegingsruimte en ondergrond','Freedom of movement and ground'],def:'0',show:i=>i.mode!=='b',o:[['0',['Goed','Good'],0],['3',['Beperkt: krap, beweeglijk/hellend vlak, zand/grind','Restricted: narrow, movable/inclined surface, sand/gravel'],3],['5',['Sterk beperkt: geen klimhulpen, open terrein','Severely restricted: no climbing aids, open country'],5],['15',['Kritiek: zeer krap, gevaarpunten, adembescherming, modder','Critical: confined, danger points, respiratory protection, mud'],15]]},
+      {k:'sp',t:'seg',l:['Snelheid','Speed'],def:'1',show:i=>i.mode==='b',o:[['0',['< 10 km/u','< 10 km/h']],['1',['10–15 km/u','10–15 km/h']],['2',['> 15 km/u','> 15 km/h']]]},
+      {k:'bw',t:'seg',l:['Gewicht last + voertuig','Weight load + vehicle'],def:'0',show:i=>i.mode==='b',o:[['0',['≤ 50 kg','≤ 50 kg']],['1',['50–150 kg','50–150 kg']],['2',['> 150 kg','> 150 kg']]]},
+      {k:'bway',t:'chk',l:['Slechte ondergrond: onverhard, kuilen, hellingen','Restricted driveway: earth, potholes, ascents'],show:i=>i.mode==='b'},
+      {k:'el',t:'chk',l:['Elektrisch ondersteund (punten halveren)','Electrically assisted (halve the points)'],show:i=>i.mode==='b'},
+      {k:'clim',t:'seg',l:['Extreem klimaat (hitte, wind, sneeuw)','Extreme climate (heat, wind, snow)'],def:'0',o:[['0',['Nee','No'],0],['4',['Soms','Occasionally'],4],['8',['Vaak','Frequently'],8]]},
+      ORG]}],
+  calc(i){ const t=upTo(KIM_MIN,num(i.mins,1)), org=optP(ORG,i.org), clim=num(i.clim); let mv,extra=0,parts;
+    if(i.mode==='b'){ mv=[[3,6,9],[6,10,14],[9,15,21]][+i.sp||0][+i.bw||0]; extra=i.bway?[8,12,16][+i.bw||0]:0; if(i.el){mv/=2;extra/=2;}
+      parts=[{l:['Beweging','Movement'],v:mv,max:21},{l:['Ondergrond','Driveway'],v:extra,max:16}]; extra+=clim; }
+    else { const ld=+i.ld||0; mv=BM_MOVE[i.mv||'w2'][ld]; const c=bmClass(ld), loc=ld>0?[[0,0,0],[4,8,12],[8,12,16]][+i.loc||0][c]:0, tw=+i.tw?[[2,4,6],[4,6,8]][+i.tw-1][c]:0, cond=num(i.cond);
+      parts=[{l:['Beweging en last','Movement and load'],v:mv,max:100},{l:['Plaats van de last','Load location'],v:loc,max:16},{l:['Romphouding','Trunk posture'],v:tw,max:8},{l:['Ruimte / ondergrond','Space / ground'],v:cond,max:15}]; extra=loc+tw+cond+clim; }
+    parts.push({l:['Klimaat','Climate'],v:clim,max:8},{l:['Werkorganisatie','Organisation'],v:org,max:4});
+    const sum=mv+extra+org, k=i.sex==='w'?1.3:1; return kimResult(t*sum*k,parts,{formula:t+' × '+r1(sum)+(k!==1?' × 1.3':'')}); }
+};
+
+/* ================= HARM 2.0 ================= */
+const PCT=[['0',['< 10 %','< 10 %']],['1',['10–50 %','10–50 %']],['2',['> 50 %','> 50 %']]];
+const harmRow=(k,l,p)=>({k,t:'seg',l,def:'0',o:PCT,pts:[0,...p]});
+const HARM_NECK=[harmRow('n1',['Hoofd ver voorover, achterover, zijwaarts gebogen of gedraaid','Head bent far forward, backward, sideways or rotated'],[1.5,3]),harmRow('n2',['Hoofd voorover én gedraaid','Head bent forward and rotated'],[2,4]),harmRow('n3',['Hoofd achterover én gedraaid','Head bent backward and rotated'],[3,4]),harmRow('n4',['(Ver) vooruitgestoken hoofd/kin','Head (chin) pushed forward'],[1.5,3]),harmRow('n5',['Bovenarm naar voren/opzij geheven of naar achteren, niet ondersteund','Upper arm raised forward/sideways or backward, unsupported'],[2.5,3.5]),harmRow('n6',['(Sterk) opgetrokken schouders','Raised shoulders'],[3,4])];
+const HARM_WRIST=[harmRow('w1',['Elleboog extreem gebogen of gestrekt','Elbow extremely flexed or extended'],[1,2]),harmRow('w2',['Onderarm sterk gedraaid (pro-/supinatie)','Forearm strongly rotated (pro-/supination)'],[1,2]),harmRow('w3',['Pols zijwaarts gebogen (duim- of pinkzijde)','Wrist deviated sideways (radial/ulnar)'],[1.5,3]),harmRow('w4',['Pols gebogen of gestrekt','Wrist flexed or extended'],[1.5,3])];
+const HD=[['0',['Niet','None']],['1',['< 4 s/min','< 4 s/min']],['2',['4–30 s/min','4–30 s/min']],['3',['> 30 s/min','> 30 s/min']]], HF=[['0',['< 1 /min','< 1 /min']],['1',['1–4 /min','1–4 /min']],['2',['4–30 /min','4–30 /min']],['3',['≥ 30 /min','≥ 30 /min']]];
+M.harm = {
+  id:'harm', group:'hand', name:['HARM 2.0 Hand-armtaken','HARM 2.0 Hand-arm tasks'], short:'HARM',
+  ref:'TNO: Hand Arm Risicobeoordelingsmethode HARM 2.0, beoordelingsformulier en handleiding papieren versie. Douwes & De Kraker (2012).',
+  scope:['Hand-armtaken > 1 uur per dag, krachten < 6 kg per hand. Beoordeel de meest actieve hand; bij klachten de zijde met klachten.','Hand-arm tasks > 1 hour per day, forces < 6 kg per hand. Assess the most active hand; with complaints, the affected side.'],
+  steps:[
+    {title:['Taakduur','Task duration'],fields:[
+      {k:'hrs',t:'num',l:['Duur van de taak op een werkdag','Task duration on a working day'],unit:['uur','h'],min:0,max:10,step:0.5,def:4},
+      {k:'days',t:'seg',l:['Dagen per week','Days per week'],def:'3',o:[['1',['1–2','1–2']],['3',['3 of meer','3 or more']]]},
+      {k:'brk',t:'chk',l:['Minimaal 7,5 min pauze per 1,5 uur','At least 7.5 min break per 1.5 hours']}]},
+    {title:['Kracht (meest actieve hand)','Force (most active hand)'],fields:[
+      {k:'f1d',t:'seg',l:['Kleine kracht (< 1 kg): duur','Small force (< 1 kg): duration'],def:'0',o:HD},{k:'f1f',t:'seg',l:['Kleine kracht: frequentie','Small force: frequency'],def:'0',o:HF},
+      {k:'f2d',t:'seg',l:['Grote kracht (1–6 kg): duur','Large force (1–6 kg): duration'],def:'0',o:HD},{k:'f2f',t:'seg',l:['Grote kracht: frequentie','Large force: frequency'],def:'0',o:HF},
+      {k:'f3f',t:'seg',l:['Piekkracht (slaan met hand, vuist, hamer)','Peak force (hitting with hand, fist, hammer)'],def:'0',o:HF}]},
+    {title:['Houding nek en schouder — % van de taakduur','Neck and shoulder posture — % of task time'],fields:HARM_NECK},
+    {title:['Houding onderarm en pols','Forearm and wrist posture'],fields:HARM_WRIST},
+    {title:['Trillingen en andere factoren','Vibration and other factors'],fields:[
+      {k:'vib',t:'sel',l:['Trillend gereedschap','Vibrating tools'],def:'0',o:[['0',['Geen of nauwelijks voelbaar (< 2,5 m/s²)','None or hardly perceptible (< 2.5 m/s²)']],['1',['Voelbaar, niet zichtbaar (2,5–5 m/s²)','Perceptible, not visible (2.5–5 m/s²)']],['2',['Net zichtbaar aan onderarm/hand (5–10 m/s²)','Just visible at forearm/hand (5–10 m/s²)']],['3',['Duidelijk zichtbaar meetrillen (≥ 10 m/s²)','Clearly visible vibration (≥ 10 m/s²)']]]},
+      {k:'vlong',t:'chk',l:['Blootstelling aan trillingen > 4 uur binnen de taak','Vibration exposure > 4 hours within the task'],show:i=>+i.vib>0},
+      {k:'o1',t:'chk',l:['Vaste pauzetijden (niet zelf pauze kunnen nemen)','Fixed break times (no self-chosen breaks)']},
+      {k:'o2',t:'chk',l:['Zonder handschoenen werken met koude of natte materialen','Working without gloves with cold or wet materials']},
+      {k:'o3',t:'chk',l:['Taak wordt gestoord bij geconcentreerd werk','Task is disturbed during concentrated work']},
+      {k:'o4',t:'chk',l:['Slechte grip: gladde/natte oppervlakken, gestrekte vingers of 2–3-vingergreep','Poor grip: smooth/wet surfaces, stretched fingers or 2–3 finger pinch']},
+      {k:'o5',t:'chk',l:['Grote precisie vereist','High precision required']}]}],
+  calc(i){ const dur=Math.max(1,Math.min(10,num(i.hrs,1))-1-(i.days==='1'?1:0)-(i.brk?1:0));
+    const force=Math.max([0,0,2,3.5][+i.f1d||0],[0,1,2.5,4][+i.f1f||0],[0,0,4,6.5][+i.f2d||0],[0,2,4,6.5][+i.f2f||0],[0,3,5,8][+i.f3f||0]);
+    const mx=rows=>Math.max(0,...rows.map(f=>f.pts[+i[f.k]||0])), neck=mx(HARM_NECK), wrist=mx(HARM_WRIST);
+    const vib=[[0,0],[2,2],[2,4],[4,4]][+i.vib||0][i.vlong?1:0], oth=0.5*['o1','o2','o3','o4','o5'].filter(k=>i[k]).length, sum=force+neck+wrist+vib+oth, s=dur*sum;
+    const band=s<30?'g':s<50?'o':'r';
+    return {score:r1(s),band,levels:3,scale:{max:75,cuts:[[30,'g'],[50,'o'],[75,'r']]},formula:r1(dur)+' × '+r1(sum),
+      parts:[{l:['Kracht','Force'],v:force,max:8},{l:['Houding nek/schouder','Neck/shoulder posture'],v:neck,max:4},{l:['Houding onderarm/pols','Forearm/wrist posture'],v:wrist,max:3},{l:['Trillingen','Vibration'],v:vib,max:4},{l:['Andere factoren','Other factors'],v:oth,max:2.5}],
+      notes:[band==='g'?['Geen verhoogd risico op klachten aan arm, nek of schouder voor nagenoeg de hele werkende bevolking.','No increased risk of arm, neck or shoulder complaints for nearly the whole working population.']:band==='o'?['Verhoogd risico voor een deel van de werknemers; neem maatregelen die het risico verlagen.','Increased risk for part of the workers; take measures that reduce the risk.']:['Sterk verhoogd risico op klachten aan arm, nek of schouder; neem direct maatregelen.','Strongly increased risk of arm, neck or shoulder complaints; take measures immediately.']]}; }
+};
+
+/* ================= WHI ================= */
+const d3=(k,l,a,b,c)=>({k,t:'seg',l,def:'1',o:[['1',[a,a]],['2',[b,b]],['3',[c,c]]]});
+const YN=(k,l)=>({k,t:'chk',l});
+M.whi = {
+  id:'whi', group:'posture', name:['WHI Werkhoudingen','WRAP Working postures'], short:'WHI',
+  ref:'TNO: Werkhoudingeninstrument (WHI / WRAP 1.0). Duurcategorieën en beoordelingsregels overgenomen uit de TNO-webtool (getoetst sept. 2026). TNO: validiteit nog onbekend.',
+  scope:['Werkhoudingen in taken > 30 min per dag met handkracht < 1 kg. Niet voor beeldschermwerk. Resultaat per houding.','Working postures in tasks > 30 min per day with hand force < 1 kg. Not for screen work. Result per posture.'],
+  steps:[
+    {title:['Knielen, hurken, staan','Kneeling, squatting, standing'],fields:[
+      d3('k_c',['Geknield werken — aaneengesloten','Kneeling — continuous'],'0–15 min','15–30 min','≥ 30 min'),d3('k_t',['Geknield werken — totaal per dag','Kneeling — total per day'],'0–30 min','30–60 min','≥ 60 min'),
+      d3('h_c',['Gehurkt werken — aaneengesloten','Squatting — continuous'],'0–15 min','15–30 min','≥ 30 min'),d3('h_t',['Gehurkt werken — totaal per dag','Squatting — total per day'],'0–30 min','30–60 min','≥ 60 min'),
+      d3('s_c',['Plaatsgebonden staan — aaneengesloten','Static standing — continuous'],['0–1 uur','0–1 h'],['1–2 uur','1–2 h'],['≥ 2 uur','≥ 2 h']),d3('s_t',['Plaatsgebonden staan — totaal per dag','Static standing — total per day'],['0–4 uur','0–4 h'],['4–6 uur','4–6 h'],['≥ 6 uur','≥ 6 h'])]},
+    {title:['Romp','Trunk'],fields:[
+      d3('tb',['Rompbuiging > 30° — totaal per dag','Trunk flexion > 30° — total per day'],'0–60 min',['1–4 uur','1–4 h'],['≥ 4 uur','≥ 4 h']),YN('tb_s',['Buiging vaak > 1 min aangehouden','Flexion often held > 1 min']),YN('tb_r',['Buiging vaak > 2× per minuut','Flexion often > 2× per minute']),
+      d3('tt',['Rompdraaiing — totaal per dag','Trunk rotation — total per day'],'0–30 min',['30 min–2 uur','30 min–2 h'],['≥ 2 uur','≥ 2 h']),YN('tt_s',['Draaiing vaak > 1 min aangehouden','Rotation often held > 1 min']),YN('tt_r',['Draaiing vaak > 2× per minuut','Rotation often > 2× per minute'])]},
+    {title:['Nek en bovenarm','Neck and upper arm'],fields:[
+      d3('nb',['Nekbuiging > 20° voor- of achterover','Neck flexion/extension > 20°'],['0–4 uur','0–4 h'],['4–6 uur','4–6 h'],['≥ 6 uur','≥ 6 h']),
+      d3('nt',['Nek gedraaid én gebogen','Neck rotated and flexed'],'0–60 min',['1–4 uur','1–4 h'],['≥ 4 uur','≥ 4 h']),
+      d3('ua',['Bovenarm > 30° geheven, niet ondersteund','Upper arm raised > 30°, unsupported'],'0–30 min',['30 min–2 uur','30 min–2 h'],['≥ 2 uur','≥ 2 h'])]},
+    {title:['Pols en extreme houdingen','Wrist and extreme postures'],fields:[
+      {k:'wr',t:'seg',l:['Pols duidelijk uit neutrale stand — totaal per dag','Wrist clearly out of neutral — total per day'],def:'1',o:[['1','0–10 min'],['2','10–30 min'],['3',['30 min–2 uur','30 min–2 h']],['4',['≥ 2 uur','≥ 2 h']]]},
+      YN('wr_s',['Polshouding vaak > 1 min aangehouden','Wrist posture often held > 1 min']),YN('wr_r',['Polshouding vaak > 15× per minuut','Wrist posture often > 15× per minute']),
+      {k:'ex',t:'sel',l:['Extreme houdingen: romp achterover, bovenarm > 60°, elleboog maximaal gebogen/gestrekt','Extreme postures: trunk backward, upper arm > 60°, elbow fully flexed/extended'],def:'1',o:[['1',['(Bijna) nooit','(Almost) never']],['2',['Af en toe, nooit lang of vaak achter elkaar','Now and then, never long or often in a row']],['3',['Regelmatig, lang of vaak achter elkaar','Regularly, long or often in a row']],['4',['Vaak of langdurig','Often or prolonged']]]}]}],
+  calc(i){ const c=['g','o','r'], lv=(k)=>Math.max(1,+i[k]||1), two=(a,b)=>c[Math.max(lv(a),lv(b))-1], mod=(a,s,r)=>{const v=lv(a); return v===3?'r':v===2?((i[s]||i[r])?'r':'o'):'g';};
+    const w=lv('wr'), wrist=w===4?'r':w===1?'g':(i.wr_s||i.wr_r)?'r':(w===3?'o':'g'), ex=lv('ex');
+    const rows=[[['Geknield werken','Kneeling'],two('k_c','k_t')],[['Gehurkt werken','Squatting'],two('h_c','h_t')],[['Staand werken','Standing'],two('s_c','s_t')],[['Rompbuiging','Trunk flexion'],mod('tb','tb_s','tb_r')],[['Rompdraaiing','Trunk rotation'],mod('tt','tt_s','tt_r')],[['Nekbuiging','Neck flexion'],c[lv('nb')-1]],[['Nekdraaiing en -buiging','Neck rotation and flexion'],c[lv('nt')-1]],[['Bovenarmheffing','Upper arm elevation'],c[lv('ua')-1]],[['Pols','Wrist'],wrist],[['Extreme houdingen','Extreme postures'],ex>=4?'r':ex===3?'o':'g']].map(([l,band])=>({l,band}));
+    const band=worst(rows.map(r=>r.band)), nR=rows.filter(r=>r.band==='r').length, nO=rows.filter(r=>r.band==='o').length;
+    return {score:null,text:nR+' × '+tr_('rood','red')+' · '+nO+' × '+tr_('oranje','orange'),band,levels:3,rows,parts:[],notes:[['Rood beoordeelde houdingen hebben prioriteit. Ga bij rood en oranje ook na of de taakduur omlaag kan.','Postures rated red have priority. For red and orange, also check whether task duration can be reduced.']]}; }
+};
+let tr_=(nl,en)=>nl;   // replaced by UI with language-aware version
+
+/* ================= DUTCH (inputs + TNO limits) ================= */
+M.dutch = {
+  id:'dutch', group:'push', name:['DUTCH Duw- en trekcheck','DUTCH Push and pull check'], short:'DUTCH',
+  ref:'TNO: Duw en Trek Check (DUTCH), rekenmethode versie aug. 2023. De grenswaarden worden door de TNO-webtool berekend (formule niet gepubliceerd) en hier overgenomen; ErgoFlow toetst de kargewichten daaraan en beoordeelt de kwalitatieve factoren.',
+  link:'https://fysiekebelasting.tno.nl/nl/instrumenten/duw-en-trek-check-dutch/',
+  scope:['Duwen/trekken van rollend materieel, handmatig, hele lichaam actief. Vul dezelfde gegevens in de TNO-tool in en neem de vier grenswaarden over.','Pushing/pulling of wheeled equipment, manual, whole body active. Enter the same data in the TNO tool and copy the four limit values.'],
+  steps:[
+    {title:['Gewicht en taak','Weight and task'],fields:[
+      {k:'avg',t:'num',l:['Gemiddeld totaalgewicht (kar + lading)','Average total weight (cart + load)'],unit:'kg',min:1,max:1000,def:200},
+      {k:'max',t:'num',l:['Maximaal totaalgewicht','Maximum total weight'],unit:'kg',min:1,max:1000,def:300},
+      {k:'grp',t:'seg',l:['Groep medewerkers','Worker group'],def:'1',o:[['1',['Gemengd','Mixed']],['2',['Vooral mannen','Mainly men']],['3',['Vooral vrouwen','Mainly women']]]},
+      {k:'hh',t:'seg',l:['Handhoogte','Hand height'],def:'2',o:[['1',['Schouder','Shoulder']],['2',['Heup','Hip']],['3',['Knie','Knee']]]},
+      {k:'dist',t:'num',l:['Gemiddelde afstand per keer','Average distance per move'],unit:'m',min:1,max:60,def:10},
+      {k:'fn',t:'num',l:['Frequentie: aantal keer','Frequency: number of times'],min:0,def:10},
+      {k:'fu',t:'seg',l:['per','per'],def:'2',o:[['1',['minuut','minute']],['2',['uur','hour']],['3',['dag','day']]]},
+      {k:'pers',t:'seg',l:['Aantal personen','Number of persons'],def:'1',o:[['1','1'],['2',['2 of meer','2 or more']]]}]},
+    {title:['Kar en route','Cart and route'],fields:[
+      {k:'wd',t:'num',l:['Wieldiameter','Wheel diameter'],unit:'cm',min:6,max:24,def:12},
+      {k:'tread',t:'seg',l:['Loopvlak wielen','Wheel tread'],def:'1',o:[['1',['Hard','Hard']],['2',['Zacht (rubber)','Soft (rubber)']],['3',['Luchtband','Pneumatic']]]},
+      {k:'maint',t:'chk',l:['Procedure om slecht lopende karren uit te nemen en te onderhouden','Procedure to remove and maintain poorly rolling carts'],def:true},
+      {k:'floor',t:'sel',l:['Ondergrond','Floor'],def:'1',o:[['1',['Hard en glad (beton)','Hard and smooth (concrete)']],['2',['Hard en ruw (asfalt)','Hard and rough (asphalt)']],['3',['Hard en ongelijk (klinkers, tegels)','Hard and uneven (pavers, tiles)']],['4',['Zacht en egaal (tapijt)','Soft and even (carpet)']],['5',['Zacht en ongelijk (aarde, grind)','Soft and uneven (soil, gravel)']]]},
+      {k:'turn',t:'chk',l:['Regelmatig van richting veranderen','Regular changes of direction']},
+      {k:'sill',t:'seg',l:['Drempels','Thresholds'],def:'1',o:[['1',['Nee','No']],['2',['Soepel','Smooth']],['3',['Botsend','Bumping']]]},
+      {k:'slope',t:'seg',l:['Hellingen','Slopes'],def:'1',o:[['1',['Nee','No']],['2',['Soms','Sometimes']],['3',['Regelmatig','Regularly']]]}]},
+    {title:['Werk en gedrag','Work and behaviour'],fields:[
+      {k:'sh',t:'chk',l:['Ook andere schouderbelastende taken (tillen boven buikhoogte, werk boven schouderhoogte)','Other shoulder-loading tasks too (lifting above waist, work above shoulder height)']},
+      {k:'oneh',t:'chk',l:['Kar wordt regelmatig met één hand getrokken','Cart is regularly pulled with one hand']},
+      {k:'swiv',t:'seg',l:['Zwenkwielen gedraaid bij starten','Swivel wheels turned at start'],def:'3',o:[['1',['Vaak','Often']],['2',['Regelmatig','Regularly']],['3',['Nauwelijks','Hardly']]]}]},
+    {title:['Grenswaarden uit de TNO-tool','Limit values from the TNO tool'],fields:[
+      {k:'ag',t:'num',l:['Gemiddeld gewicht — groen tot','Average weight — green below'],unit:'kg',min:0},{k:'ar',t:'num',l:['Gemiddeld gewicht — rood vanaf','Average weight — red from'],unit:'kg',min:0},
+      {k:'mg',t:'num',l:['Maximaal gewicht — groen tot','Maximum weight — green below'],unit:'kg',min:0},{k:'mr',t:'num',l:['Maximaal gewicht — rood vanaf','Maximum weight — red from'],unit:'kg',min:0}]}],
+  calc(i){ const flags=[]; const fl=(c,t)=>{ if(c) flags.push(t); };
+    fl(num(i.wd,12)<13,['Kleine wielen: kies bij vervanging 13–15 cm of groter.','Small wheels: choose 13–15 cm or larger when replacing.']);
+    fl(i.tread&&i.tread!=='1',['Zacht loopvlak of luchtband verhoogt de rolweerstand.','Soft tread or pneumatic tyres increase rolling resistance.']);
+    fl(i.maint===false,['Geen onderhoudsprocedure voor slecht lopende karren.','No maintenance procedure for poorly rolling carts.']);
+    fl(+i.floor>1,['Ondergrond verhoogt de rolweerstand.','Floor increases rolling resistance.']);
+    fl(i.turn,['Veel richtingsveranderingen kosten extra kracht.','Many changes of direction require extra force.']);
+    fl(+i.sill===3,['Drempels waar de kar tegenaan botst.','Thresholds the cart bumps against.']); fl(+i.slope>1,['Hellingen op de route.','Slopes on the route.']);
+    fl(i.sh,['Duwen/trekken is niet de enige schouderbelasting.','Pushing/pulling is not the only shoulder load.']); fl(i.oneh,['Eenhandig trekken geeft extreme armhoudingen.','One-handed pulling causes extreme arm postures.']);
+    fl(+i.swiv<3,['Gedraaide zwenkwielen geven extra startweerstand.','Turned swivel wheels add starting resistance.']);
+    const cls=(w,g,r)=> (num(g)>0&&num(r)>0)? (w<num(g)?'g':w<num(r)?'o':'r') : null, a=cls(num(i.avg),i.ag,i.ar), m=cls(num(i.max),i.mg,i.mr), band=worst([a,m]);
+    const rows=[{l:['Gemiddeld kargewicht','Average cart weight'],v:num(i.avg)+' kg'+(a?' · '+tr_('groen tot ','green below ')+num(i.ag)+', '+tr_('rood vanaf ','red from ')+num(i.ar):''),band:a},{l:['Maximaal kargewicht','Maximum cart weight'],v:num(i.max)+' kg'+(m?' · '+tr_('groen tot ','green below ')+num(i.mg)+', '+tr_('rood vanaf ','red from ')+num(i.mr):''),band:m}];
+    return {score:null,text:band?null:tr_('Grenswaarden invullen','Enter limit values'),band,levels:3,rows,parts:[],flags,
+      notes:(band?[]:[['Nog geen oordeel: neem de grenswaarden over uit de TNO-tool (stap 4).','No verdict yet: copy the limit values from the TNO tool (step 4).']]).concat(flags.length>=2?[['Meerdere verzwarende factoren: de werkelijke belasting is waarschijnlijk hoger dan berekend.','Several aggravating factors: the actual load is probably higher than calculated.']]:[])}; }
+};
+
+/* ================= REBA / RULA ================= */
+const REBA_A=[[[1,2,3,4],[1,2,3,4],[3,3,5,6]],[[2,3,4,5],[3,4,5,6],[4,5,6,7]],[[2,4,5,6],[4,5,6,7],[5,6,7,8]],[[3,5,6,7],[5,6,7,8],[6,7,8,9]],[[4,6,7,8],[6,7,8,9],[7,8,9,9]]];
+const REBA_B=[[[1,2,2],[1,2,3]],[[1,2,3],[2,3,4]],[[3,4,5],[4,5,5]],[[4,5,5],[5,6,7]],[[6,7,8],[7,8,8]],[[7,8,8],[8,9,9]]];
+const REBA_C=[[1,1,1,2,3,3,4,5,6,7,7,7],[1,2,2,3,4,4,5,6,6,7,7,8],[2,3,3,3,4,5,6,7,7,8,8,8],[3,4,4,4,5,6,7,8,8,9,9,9],[4,4,4,5,6,7,8,8,9,9,9,9],[6,6,6,7,8,8,9,9,10,10,10,10],[7,7,7,8,9,9,9,10,10,11,11,11],[8,8,8,9,10,10,10,10,10,11,11,11],[9,9,9,10,10,10,11,11,11,12,12,12],[10,10,10,11,11,11,11,12,12,12,12,12],[11,11,11,11,12,12,12,12,12,12,12,12],[12,12,12,12,12,12,12,12,12,12,12,12]];
+const cl=(v,a,b)=>Math.min(b,Math.max(a,v));
+const UARM=[['1',['20° naar achter tot 20° naar voren','20° extension to 20° flexion']],['2',['> 20° naar achter of 20–45° naar voren','> 20° extension or 20–45° flexion']],['3','45–90°'],['4','> 90°']];
+M.reba = {
+  id:'reba', group:'posture', name:['REBA Houdingsmoment','REBA Posture snapshot'], short:'REBA',
+  ref:'Hignett & McAtamney (2000), Rapid Entire Body Assessment (REBA). Applied Ergonomics 31, 201–205.',
+  scope:['Momentopname van de hele lichaamshouding. Kies de zwaarste of meest voorkomende houding; een foto met hoekmeting helpt.','Snapshot of the whole-body posture. Pick the worst or most frequent posture; a photo with angle measurement helps.'],
+  steps:[
+    {title:['Romp, nek, benen','Trunk, neck, legs'],fields:[
+      {k:'tr',t:'sel',l:['Romp','Trunk'],def:'1',o:[['1',['Rechtop','Upright']],['2',['0–20° voor- of achterover','0–20° flexion or extension']],['3',['20–60° voorover of > 20° achterover','20–60° flexion or > 20° extension']],['4',['> 60° voorover','> 60° flexion']]]},
+      YN('tr_t',['Romp gedraaid of zijwaarts gebogen','Trunk twisted or side-bent']),
+      {k:'nk',t:'seg',l:['Nek','Neck'],def:'1',o:[['1',['0–20° voorover','0–20° flexion']],['2',['> 20° of achterover','> 20° or extension']]]},YN('nk_t',['Nek gedraaid of zijwaarts gebogen','Neck twisted or side-bent']),
+      {k:'lg',t:'seg',l:['Benen','Legs'],def:'1',o:[['1',['Beide benen dragen, lopen, zitten','Bilateral weight bearing, walking, sitting']],['2',['Eén been / instabiel','Unilateral / unstable']]]},
+      {k:'kn',t:'seg',l:['Kniebuiging','Knee flexion'],def:'0',o:[['0','< 30°'],['1','30–60°'],['2','> 60°']]},
+      {k:'ld',t:'seg',l:['Last / kracht','Load / force'],def:'0',o:[['0','< 5 kg'],['1','5–10 kg'],['2','> 10 kg']]},YN('ld_s',['Schok of snelle krachtopbouw','Shock or rapid build-up of force'])]},
+    {title:['Armen en polsen','Arms and wrists'],fields:[
+      {k:'ua',t:'sel',l:['Bovenarm','Upper arm'],def:'1',o:UARM},YN('ua_a',['Arm geabduceerd of geroteerd','Arm abducted or rotated']),YN('ua_r',['Schouder opgetrokken','Shoulder raised']),YN('ua_s',['Arm ondersteund of leunend','Arm supported or leaning']),
+      {k:'la',t:'seg',l:['Onderarm','Lower arm'],def:'1',o:[['1','60–100°'],['2',['< 60° of > 100°','< 60° or > 100°']]]},
+      {k:'wr',t:'seg',l:['Pols','Wrist'],def:'1',o:[['1','0–15°'],['2','> 15°']]},YN('wr_t',['Pols gedraaid of zijwaarts gebogen','Wrist twisted or deviated']),
+      {k:'cp',t:'seg',l:['Grip','Coupling'],def:'0',o:[['0',['Goed','Good']],['1',['Redelijk','Fair']],['2',['Slecht','Poor']],['3',['Onaanvaardbaar','Unacceptable']]]}]},
+    {title:['Activiteit','Activity'],fields:[YN('ac1',['Lichaamsdeel > 1 min statisch','Body part static > 1 min']),YN('ac2',['Herhaalde kleine bewegingen > 4×/min','Repeated small-range actions > 4×/min']),YN('ac3',['Snelle, grote houdingswisselingen of instabiele basis','Rapid large changes in posture or unstable base'])]}],
+  calc(i){ const tr=cl((+i.tr||1)+(i.tr_t?1:0),1,5), nk=cl((+i.nk||1)+(i.nk_t?1:0),1,3), lg=cl((+i.lg||1)+(+i.kn||0),1,4);
+    const A=REBA_A[tr-1][nk-1][lg-1]+(+i.ld||0)+(i.ld_s?1:0), ua=cl((+i.ua||1)+(i.ua_a?1:0)+(i.ua_r?1:0)-(i.ua_s?1:0),1,6), la=+i.la||1, wr=cl((+i.wr||1)+(i.wr_t?1:0),1,3);
+    const B=REBA_B[ua-1][la-1][wr-1]+(+i.cp||0), C=REBA_C[cl(A,1,12)-1][cl(B,1,12)-1], act=(i.ac1?1:0)+(i.ac2?1:0)+(i.ac3?1:0), s=C+act;
+    const band=s<=3?'g':s<=7?'y':s<=10?'o':'r', lab={g:['Verwaarloosbaar tot laag','Negligible to low'],y:['Gemiddeld: nader onderzoek, verandering binnenkort','Medium: investigate further, change soon'],o:['Hoog: onderzoeken en veranderen','High: investigate and implement change'],r:['Zeer hoog: direct veranderen','Very high: implement change now']}[band];
+    return {score:s,band,levels:4,scale:{max:15,cuts:[[3.5,'g'],[7.5,'y'],[10.5,'o'],[15,'r']]},bandText:lab,formula:'A '+A+' · B '+B+' · C '+C+' + '+act,
+      parts:[{l:['Romp','Trunk'],v:tr,max:5},{l:['Nek','Neck'],v:nk,max:3},{l:['Benen','Legs'],v:lg,max:4},{l:['Bovenarm','Upper arm'],v:ua,max:6},{l:['Onderarm','Lower arm'],v:la,max:2},{l:['Pols','Wrist'],v:wr,max:3}],notes:[]}; }
+};
+const RULA_A=[[[1,2,2,2,2,3,3,3],[2,2,2,2,3,3,3,3],[2,3,3,3,3,3,4,4]],[[2,3,3,3,3,4,4,4],[3,3,3,3,3,4,4,4],[3,4,4,4,4,4,5,5]],[[3,3,4,4,4,4,5,5],[3,4,4,4,4,4,5,5],[4,4,4,4,4,5,5,5]],[[4,4,4,4,4,5,5,5],[4,4,4,4,4,5,5,5],[4,4,4,5,5,5,6,6]],[[5,5,5,5,5,6,6,7],[5,6,6,6,6,7,7,7],[6,6,6,7,7,7,7,8]],[[7,7,7,7,7,8,8,9],[8,8,8,8,8,9,9,9],[9,9,9,9,9,9,9,9]]];
+const RULA_B=[[1,3,2,3,3,4,5,5,6,6,7,7],[2,3,2,3,4,5,5,5,6,7,7,7],[3,3,3,4,4,5,5,6,6,7,7,7],[5,5,5,6,6,7,7,7,7,7,8,8],[7,7,7,7,7,8,8,8,8,8,8,8],[8,8,8,8,8,8,8,9,9,9,9,9]];
+const RULA_C=[[1,2,3,3,4,5,5],[2,2,3,4,4,5,5],[3,3,3,4,4,5,6],[3,3,3,4,5,6,6],[4,4,4,5,6,7,7],[4,4,5,6,6,7,7],[5,5,6,6,7,7,7],[5,5,6,7,7,7,7]];
+const FORCE4=[['0',['< 2 kg, af en toe','< 2 kg, intermittent']],['1',['2–10 kg, af en toe','2–10 kg, intermittent']],['2',['2–10 kg statisch/herhaald','2–10 kg static/repeated']],['3',['> 10 kg of schok','> 10 kg or shock']]];
+M.rula = {
+  id:'rula', group:'posture', name:['RULA Bovenlichaam','RULA Upper limb snapshot'], short:'RULA',
+  ref:'McAtamney & Corlett (1993), RULA: a survey method for the investigation of work-related upper limb disorders. Applied Ergonomics 24(2), 91–99.',
+  scope:['Momentopname voor overwegend zittend of staand werk met belasting van arm, nek en romp.','Snapshot for mainly seated or standing work loading arm, neck and trunk.'],
+  steps:[
+    {title:['Arm en pols','Arm and wrist'],fields:[
+      {k:'ua',t:'sel',l:['Bovenarm','Upper arm'],def:'1',o:UARM},YN('ua_r',['Schouder opgetrokken','Shoulder raised']),YN('ua_a',['Arm geabduceerd','Arm abducted']),YN('ua_s',['Arm ondersteund of leunend','Arm supported or leaning']),
+      {k:'la',t:'seg',l:['Onderarm','Lower arm'],def:'1',o:[['1','60–100°'],['2',['< 60° of > 100°','< 60° or > 100°']]]},YN('la_m',['Arm werkt over middellijn of naar buiten','Arm works across midline or out to side']),
+      {k:'wr',t:'seg',l:['Pols','Wrist'],def:'1',o:[['1',['Neutraal','Neutral']],['2','0–15°'],['3','> 15°']]},YN('wr_d',['Pols zijwaarts gebogen','Wrist deviated']),
+      {k:'wt',t:'seg',l:['Polsrotatie','Wrist twist'],def:'1',o:[['1',['Middenbereik','Mid range']],['2',['Eindstand','End of range']]]},
+      YN('mA',['Arm: statisch > 1 min of herhaald > 4×/min','Arm: static > 1 min or repeated > 4×/min']),{k:'fA',t:'sel',l:['Kracht / last arm','Force / load arm'],def:'0',o:FORCE4}]},
+    {title:['Nek, romp, benen','Neck, trunk, legs'],fields:[
+      {k:'nk',t:'seg',l:['Nek','Neck'],def:'1',o:[['1','0–10°'],['2','10–20°'],['3','> 20°'],['4',['Achterover','Extension']]]},YN('nk_t',['Nek gedraaid','Neck twisted']),YN('nk_s',['Nek zijwaarts gebogen','Neck side-bent']),
+      {k:'tr',t:'sel',l:['Romp','Trunk'],def:'1',o:[['1',['Rechtop of goed ondersteund zittend','Upright or well supported sitting']],['2','0–20°'],['3','20–60°'],['4','> 60°']]},YN('tr_t',['Romp gedraaid','Trunk twisted']),YN('tr_s',['Romp zijwaarts gebogen','Trunk side-bent']),
+      {k:'lg',t:'seg',l:['Benen','Legs'],def:'1',o:[['1',['Gesteund, in balans','Supported, balanced']],['2',['Niet gesteund','Not supported']]]},
+      YN('mB',['Nek/romp: statisch > 1 min of herhaald > 4×/min','Neck/trunk: static > 1 min or repeated > 4×/min']),{k:'fB',t:'sel',l:['Kracht / last nek, romp, benen','Force / load neck, trunk, legs'],def:'0',o:FORCE4}]}],
+  calc(i){ const ua=cl((+i.ua||1)+(i.ua_r?1:0)+(i.ua_a?1:0)-(i.ua_s?1:0),1,6), la=cl((+i.la||1)+(i.la_m?1:0),1,3), wr=cl((+i.wr||1)+(i.wr_d?1:0),1,4), wt=+i.wt||1;
+    const A=RULA_A[ua-1][la-1][(wr-1)*2+(wt-1)]+(i.mA?1:0)+(+i.fA||0), nk=cl((+i.nk||1)+(i.nk_t?1:0)+(i.nk_s?1:0),1,6), tr=cl((+i.tr||1)+(i.tr_t?1:0)+(i.tr_s?1:0),1,6), lg=+i.lg||1;
+    const B=RULA_B[nk-1][(tr-1)*2+(lg-1)]+(i.mB?1:0)+(+i.fB||0), s=RULA_C[cl(A,1,8)-1][cl(B,1,7)-1];
+    const band=s<=2?'g':s<=4?'y':s<=6?'o':'r', lab={g:['Aanvaardbaar','Acceptable'],y:['Nader onderzoek, verandering kan nodig zijn','Further investigation, change may be needed'],o:['Onderzoeken en binnenkort veranderen','Investigate and change soon'],r:['Direct onderzoeken en veranderen','Investigate and change immediately']}[band];
+    return {score:s,band,levels:4,scale:{max:7,cuts:[[2.5,'g'],[4.5,'y'],[6.5,'o'],[7,'r']]},bandText:lab,formula:'A '+A+' · B '+B,
+      parts:[{l:['Bovenarm','Upper arm'],v:ua,max:6},{l:['Onderarm','Lower arm'],v:la,max:3},{l:['Pols','Wrist'],v:wr,max:4},{l:['Nek','Neck'],v:nk,max:6},{l:['Romp','Trunk'],v:tr,max:6}],notes:[]}; }
+};
+
+/* ================= Screen work checklist ================= */
+const SCR=[['s1',['Laptop of tablet > 2 uur per dag zonder los toetsenbord, muis en verhoogd scherm','Laptop or tablet > 2 h per day without separate keyboard, mouse and raised screen']],['s2',['Bovenrand scherm boven ooghoogte, of scherm niet recht voor de gebruiker op ongeveer armlengte','Top of screen above eye level, or screen not straight ahead at about arm\'s length']],['s3',['Stoel niet instelbaar of niet ingesteld (zithoogte, rugleuning, armsteunen)','Chair not adjustable or not adjusted (seat height, backrest, armrests)']],['s4',['Werkbladhoogte past niet; voeten niet gesteund','Desk height does not fit; feet not supported']],['s5',['Onderarmen niet ondersteund bij typen en muizen','Forearms not supported while typing and using the mouse']],['s6',['Hinderlijke reflectie of verblinding op het scherm','Disturbing reflections or glare on the screen']],['s7',['Beeldschermwerk wordt niet minstens elke 2 uur afgewisseld met ander werk of pauze','Screen work is not alternated with other work or a break at least every 2 hours']],['s8',['Vaak > 1 uur achter elkaar zitten zonder lopen of staan','Often sitting > 1 hour in a row without walking or standing']],['s9',['Zeer intensief gebruik van één invoermiddel (veel muizen, typen of lezen)','Very intensive use of one input device (much mousing, typing or reading)']],['s10',['Hoge werkdruk of strakke deadlines bij het beeldschermwerk','High work pressure or tight deadlines during screen work']]];
+M.screen = {
+  id:'screen', group:'screen', name:['Beeldschermwerk checklist','Screen work checklist'], short:['Beeldscherm','Screen'],
+  ref:'ErgoFlow-werkplekchecklist op basis van Arbobesluit afd. 5.2 en Arboregeling 5.1–5.3; thema\'s sluiten aan op TNO BAS (Beter Achter je Schermen), de zelfcheck voor individuele medewerkers.',
+  link:'https://fysiekebelasting.tno.nl/nl/instrumenten/beeldschermwerk-beoordelen/',
+  scope:['Werkplekken met ≥ 2 uur beeldschermwerk per dag. Vink aan wat van toepassing is. Geeft aandachtspunten, geen risicoscore.','Workplaces with ≥ 2 hours of screen work per day. Tick what applies. Gives attention points, not a risk score.'],
+  steps:[{title:['Aandachtspunten','Attention points'],fields:[{k:'hrs',t:'num',l:['Beeldschermwerk per dag','Screen work per day'],unit:['uur','h'],min:0,max:12,step:0.5,def:6},...SCR.map(([k,l])=>({k,t:'chk',l}))]}],
+  calc(i){ const hit=SCR.filter(([k])=>i[k]), low=num(i.hrs)<2;
+    return {score:hit.length,label:tr_('punten','items'),band:low||!hit.length?'g':'o',levels:3,bandText:(low||!hit.length)?['Geen aandachtspunten','No attention points']:['Aandachtspunten','Attention points'],scale:{max:10,cuts:[[0.5,'g'],[10,'o']]},parts:[],flags:hit.map(x=>x[1]),
+      notes:[low?['Minder dan 2 uur per dag: valt buiten de regels voor beeldschermwerk.','Less than 2 hours per day: outside the screen work regulations.']:hit.length?['Los de aangevinkte punten op; laat medewerkers zelf de TNO BAS-check doen.','Resolve the ticked items; let employees do the TNO BAS self-check.']:['Geen aandachtspunten.','No attention points.']]}; }
+};
+
+/* ---- groups + triage ---- */
+const GROUPS=[['lift',['Tillen en dragen','Lifting and carrying']],['push',['Duwen en trekken','Pushing and pulling']],['hand',['Repeterend hand-armwerk','Repetitive hand-arm work']],['posture',['Werkhoudingen','Working postures']],['force',['Lichaamskracht en beweging','Whole-body force and movement']],['screen',['Beeldschermwerk','Screen work']]];
+const TRIAGE=[
+  ['lift',['Worden lasten van meer dan 3 kg getild of gedragen?','Are loads over 3 kg lifted or carried?'],['niosh','kimlhc']],
+  ['push',['Worden karren, rolcontainers of palletwagens geduwd of getrokken?','Are carts, roll containers or pallet trucks pushed or pulled?'],['dutch','kimpp']],
+  ['hand',['Repeterend hand-armwerk van meer dan 1 uur per dag?','Repetitive hand-arm work for more than 1 hour per day?'],['harm','kimmho']],
+  ['posture',['Langdurig of vaak bukken, draaien, knielen, reiken, armen geheven of plaatsgebonden staan?','Prolonged or frequent bending, twisting, kneeling, reaching, raised arms or static standing?'],['whi','kimabp','reba']],
+  ['force',['Grote krachten met het hele lichaam (scheppen, hendels, zwaar gereedschap, slepen)?','Large whole-body forces (shovelling, levers, heavy tools, dragging)?'],['kimbf']],
+  ['move',['Veel lopen, traplopen of klimmen, met of zonder last?','Much walking, stair climbing or climbing, with or without load?'],['kimbm']],
+  ['screen',['Beeldschermwerk van 2 uur of meer per dag?','Screen work of 2 hours or more per day?'],['screen']],
+  ['health',['Zijn er gezondheidsklachten die met het werk te maken kunnen hebben?','Are there health complaints that may be work-related?'],[]]];
+
+function defaults(m){ const o={}; const walk=fs=>fs.forEach(f=>{ if(f.t==='list'){ const it={}; f.item.forEach(s=>{ if(s.def!==undefined) it[s.k]=s.def; }); o[f.k]=[it]; } else if(f.def!==undefined) o[f.k]=f.def; }); m.steps.forEach(s=>walk(s.fields)); return o; }
+
+/* ===================== ErgoFlow app ===================== */
+const VERSION='0.1.0';
+let LANG=(()=>{try{return localStorage.getItem('ergoflow.lang')}catch(e){return null}})()||'nl';
+const T=(nl,en)=>LANG==='nl'?nl:en, tr=x=>Array.isArray(x)?x[LANG==='nl'?0:1]:(x??'');
+tr_=T;
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const today=()=>new Date().toISOString().slice(0,10);
+const fmtN=n=>n===Infinity?'∞':(n===null||n===undefined||n==='')?'–':String(n).replace(/\./g,LANG==='nl'?',':'.');
+const fmtD=d=>{ if(!d)return ''; const [y,m,dd]=d.split('-'); return dd+'-'+m+'-'+y; };
+const ICON={back:'<path d="M15 5l-7 7 7 7"/>',plus:'<path d="M12 5v14M5 12h14"/>',cam:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',print:'<path d="M7 9V4h10v5M7 17H4v-7h16v7h-3M7 14h10v6H7z"/>',dots:'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',chev:'<path d="M6 15l6-6 6 6"/>'};
+const ico=n=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</svg>`;
+
+/* ---- Storage seam. All persistence goes through Store; swap this object for a SfhaSync-backed
+        implementation (app name "ergoflow", collections tasks/evals/photos, blobs as assets) per SYNC-CONTRACT. ---- */
+const Store={ db:null,
+  open(){ return new Promise((res,rej)=>{ const r=indexedDB.open('ergoflow',1);
+    r.onupgradeneeded=()=>['tasks','evals','photos','blobs'].forEach(s=>r.result.createObjectStore(s,{keyPath:'id'}));
+    r.onsuccess=()=>{this.db=r.result;res();}; r.onerror=()=>rej(r.error); }); },
+  tx(s,mode,fn){ return new Promise((res,rej)=>{ const t=this.db.transaction(s,mode), q=fn(t.objectStore(s)); t.oncomplete=()=>res(q&&q.result); t.onerror=()=>rej(t.error); }); },
+  all(s){return this.tx(s,'readonly',o=>o.getAll());}, get(s,id){return this.tx(s,'readonly',o=>o.get(id));},
+  put(s,v){return this.tx(s,'readwrite',o=>o.put(v));}, del(s,id){return this.tx(s,'readwrite',o=>o.delete(id));} };
+const S={tasks:[],evals:[],photos:[]};
+const getTask=id=>S.tasks.find(t=>t.id===id), getEval=id=>S.evals.find(e=>e.id===id);
+const taskEvals=id=>S.evals.filter(e=>e.taskId===id).sort((a,b)=>a.created-b.created);
+const photosOf=(taskId,evalId)=>S.photos.filter(p=>p.taskId===taskId&&(evalId===undefined||(p.evalId||null)===(evalId||null))).sort((a,b)=>a.created-b.created);
+const timers={}; const saveSoon=(store,obj)=>{ clearTimeout(timers[obj.id]); timers[obj.id]=setTimeout(()=>Store.put(store,obj),350); };
+function touchTask(t){ t.updated=Date.now(); saveSoon('tasks',t); }
+/* current state of a task: if a method has an "after" assessment, that one counts */
+function currentEvals(taskId){ const ev=taskEvals(taskId); return ev.filter(e=>e.phase==='after'||!ev.some(x=>x.phase==='after'&&x.method===e.method&&(x.label||'')===(e.label||''))); }
+const taskBand=id=>worst(currentEvals(id).map(e=>e.result&&e.result.band));
+const phaseName=p=>p==='after'?T('Na maatregelen','After measures'):T('Huidig','Current');
+const bandText=r=>r.band?tr(r.bandText||(r.levels===3&&r.band==='o'?['Verhoogd risico','Increased risk']:BAND_LABEL[r.band])):T('Nog geen oordeel','No verdict yet');
+const scoreText=r=>(r.score===null||r.score===undefined)?(r.text||'–'):fmtN(r.score);
+const chip=r=>`<span class="chip"><span class="dot ${r.band?'b-'+r.band:''}"></span>${esc(bandText(r))}</span>`;
+
+/* ---- shell ---- */
+function setBar(title,back,actions=''){ $('#bar').innerHTML=(back!==null?`<button data-go="${back}" aria-label="${T('Terug','Back')}">${ico('back')}</button>`:'')+`<h1>${esc(title)}</h1>`+actions; }
+function openSheet(html){ $('#panel').innerHTML=html; $('#sheet').classList.add('on'); }
+function closeSheet(){ $('#sheet').classList.remove('on'); }
+$('#sheet').addEventListener('click',e=>{ if(e.target.id==='sheet') closeSheet(); });
+document.addEventListener('click',e=>{ const g=e.target.closest('[data-go]'); if(g){ location.hash=g.dataset.go; } });
+function route(){ const [,v,id]=location.hash.split('/'); closeSheet(); $('#view').className='';
+  if(v==='t'&&getTask(id)) viewTask(id); else if(v==='e'&&getEval(id)) viewEval(id); else if(v==='r'&&getTask(id)) viewReport(id); else viewHome(); }
+window.addEventListener('hashchange',()=>{ route(); window.scrollTo(0,0); });
+
+/* ---- home ---- */
+let query='';
+function viewHome(){ setBar('ErgoFlow',null,`<button id="menu" aria-label="Menu">${ico('dots')}</button>`);
+  $('#view').innerHTML=`<div class="row" style="margin-bottom:12px"><input type="text" id="q" class="grow" placeholder="${T('Zoek taak, afdeling of werkplek','Search task, department or workstation')}" value="${esc(query)}"><button class="btn pri" id="new">${ico('plus')}${T('Nieuwe taak','New task')}</button></div><div id="list"></div>`;
+  const list=()=>{ const q=query.toLowerCase(), ts=S.tasks.filter(t=>!q||[t.title,t.dept,t.station].join(' ').toLowerCase().includes(q)).sort((a,b)=>b.updated-a.updated);
+    $('#list').innerHTML=ts.length?ts.map(t=>{ const ph=photosOf(t.id)[0], n=taskEvals(t.id).length, b=taskBand(t.id);
+      return `<button class="item" data-go="#/t/${t.id}">${ph?`<img class="thumb" src="${ph.thumb}" alt="">`:`<span class="thumb"></span>`}<span class="grow"><span class="t">${esc(t.title||T('Naamloze taak','Untitled task'))}</span><br><span class="muted small">${esc([t.dept,t.station,fmtD(t.date)].filter(Boolean).join(', '))}${n?' — '+n+' '+T(n===1?'beoordeling':'beoordelingen',n===1?'assessment':'assessments'):''}</span></span><span class="dot ${b?'b-'+b:''}"></span></button>`; }).join('')
+      :`<div class="empty">${S.tasks.length?T('Geen taken gevonden.','No tasks found.'):T('Nog geen taken. Maak een taak aan, voeg foto\'s toe en kies een beoordelingsmethode.','No tasks yet. Create a task, add photos and pick an assessment method.')}</div>`; };
+  list(); $('#q').oninput=e=>{query=e.target.value;list();};
+  $('#new').onclick=async()=>{ const t={id:uid(),title:'',dept:'',station:'',assessor:S.tasks[0]?.assessor||'',date:today(),exposed:'',hours:'',desc:'',triage:{},measures:[],created:Date.now(),updated:Date.now(),fresh:true}; S.tasks.push(t); await Store.put('tasks',t); location.hash='#/t/'+t.id; };
+  $('#menu').onclick=menuSheet; }
+function menuSheet(){ openSheet(`<h2>ErgoFlow <span class="muted small">v${VERSION}</span></h2>
+  <p class="small muted">${T('Beoordeling van fysieke belasting. Alle gegevens blijven op dit apparaat.','Physical workload assessment. All data stays on this device.')}</p>
+  <div class="fld"><span class="lbl">${T('Taal','Language')}</span><div class="seg"><button data-lang="nl" aria-pressed="${LANG==='nl'}">Nederlands</button><button data-lang="en" aria-pressed="${LANG==='en'}">English</button></div></div>
+  <div class="row" style="flex-wrap:wrap"><button class="btn" id="exp">${T('Alles exporteren (JSON)','Export everything (JSON)')}</button><button class="btn" id="impb">${T('Importeren','Import')}</button></div>
+  <p class="small muted" style="margin-bottom:0">${T('Methoden','Methods')}: ${Object.values(M).map(m=>tr(m.short)).join(', ')}.</p>`);
+  $$('[data-lang]',$('#panel')).forEach(b=>b.onclick=()=>{ LANG=b.dataset.lang; try{localStorage.setItem('ergoflow.lang',LANG);}catch(e){} document.documentElement.lang=LANG; route(); });
+  $('#exp').onclick=()=>exportJSON(); $('#impb').onclick=()=>$('#imp').click(); }
+
+/* ---- task ---- */
+const STRAT=[['1',['Bronaanpak','Eliminate at source']],['2',['Collectief / technisch','Collective / technical']],['3',['Organisatorisch / individueel','Organisational / individual']],['4',['Persoonlijke bescherming','Personal protection']]];
+function viewTask(id){ const t=getTask(id), ev=taskEvals(id);
+  setBar(t.title||T('Nieuwe taak','New task'),'#/',`<button data-go="#/r/${id}">${ico('print')}<span>${T('Rapport','Report')}</span></button>`);
+  const fld=(k,l,type='text',cls='')=>`<label class="fld ${cls}"><span class="lbl">${l}</span><input type="${type}" data-tf="${k}" value="${esc(t[k])}" ${type==='number'?'inputmode="decimal" min="0"':''}></label>`;
+  $('#view').innerHTML=`
+  <details class="card" ${t.fresh||!t.title?'open':''}><summary style="cursor:pointer;font-weight:650">${T('Taakgegevens','Task details')} <span class="muted small" id="sumline">${esc([t.dept,t.station].filter(Boolean).join(', '))}</span></summary>
+    <div class="fgrid" style="margin-top:12px">${fld('title',T('Taak','Task'),'text','full')}${fld('dept',T('Afdeling','Department'))}${fld('station',T('Werkplek / lijn','Workstation / line'))}${fld('assessor',T('Beoordelaar','Assessor'))}${fld('date',T('Datum','Date'),'date')}${fld('exposed',T('Aantal medewerkers','Number of workers'),'number')}${fld('hours',T('Uren per dag aan deze taak','Hours per day on this task'),'number')}
+    <label class="fld full"><span class="lbl">${T('Omschrijving van de taak','Task description')}</span><textarea data-tf="desc">${esc(t.desc)}</textarea></label></div></details>
+  <section class="card"><h2>${T('Foto\'s','Photos')}</h2><div class="photos" id="tphotos"></div></section>
+  <section class="card"><h2>${T('Welke belasting komt voor?','Which loads occur?')}</h2><div id="triage"></div></section>
+  <section class="card"><div class="row" style="margin-bottom:10px"><h2 class="grow">${T('Beoordelingen','Assessments')}</h2><button class="btn sm" id="addev">${ico('plus')}${T('Methode','Method')}</button></div><div id="evals"></div></section>
+  <section class="card"><div class="row" style="margin-bottom:4px"><h2 class="grow">${T('Maatregelen','Measures')}</h2><button class="btn sm" id="addm">${ico('plus')}${T('Maatregel','Measure')}</button></div><div id="measures"></div></section>
+  <div class="row noprint"><button class="btn" id="expt">${T('Taak exporteren','Export task')}</button><span class="grow"></span><button class="btn danger" id="delt">${T('Taak verwijderen','Delete task')}</button></div>`;
+  delete t.fresh;
+  $('#view').oninput=e=>{ const k=e.target.dataset.tf; if(k){ t[k]=e.target.value; touchTask(t); if(k==='title') $('#bar h1').textContent=t.title||T('Nieuwe taak','New task'); } };
+  renderPhotos($('#tphotos'),id,null);
+  const triage=()=>{ $('#triage').innerHTML=TRIAGE.map(([k,q,ms])=>{ const on=t.triage[k]===true, have=new Set(taskEvals(id).map(e=>e.method)), todo=ms.filter(m=>!have.has(m));
+      return `<div style="padding:8px 0;border-top:1px solid var(--soft)"><div class="row"><span class="grow small">${tr(q)}</span><div class="seg" style="flex:none"><button data-tri="${k}" data-v="1" aria-pressed="${on}">${T('Ja','Yes')}</button><button data-tri="${k}" data-v="0" aria-pressed="${t.triage[k]===false}">${T('Nee','No')}</button></div></div>${on&&todo.length?`<div class="row" style="flex-wrap:wrap;margin-top:8px;gap:6px">${todo.map(m=>`<button class="btn sm" data-addm="${m}">${ico('plus')}${esc(tr(M[m].short))}</button>`).join('')}</div>`:''}${on&&k==='health'?`<p class="note muted">${T('Ga bij klachten altijd na waar de oorzaak ligt en betrek de bedrijfsarts.','With complaints, always find the cause and involve the occupational physician.')}</p>`:''}</div>`; }).join(''); };
+  const evals=()=>{ const ev=taskEvals(id); $('#evals').innerHTML=ev.length?ev.map(e=>{ const m=M[e.method], r=e.result||{};
+      return `<button class="item" data-go="#/e/${e.id}" style="margin-bottom:6px"><span class="dot ${r.band?'b-'+r.band:''}"></span><span class="grow"><span class="t">${esc(tr(m.short))}${e.label?' — '+esc(e.label):''}</span> <span class="tag ${e.phase}">${phaseName(e.phase)}</span><br><span class="muted small">${esc(bandText(r))}</span></span><span class="score">${esc(scoreText(r))}</span></button>`; }).join(''):`<p class="muted small" style="margin:0">${T('Nog geen beoordelingen. Beantwoord de vragen hierboven of kies zelf een methode.','No assessments yet. Answer the questions above or pick a method yourself.')}</p>`; };
+  const measures=()=>{ $('#measures').innerHTML=t.measures.length?t.measures.map((m,n)=>`<div class="measure" data-mi="${n}"><textarea class="full" data-mf="text" placeholder="${T('Wat wordt er gedaan?','What will be done?')}">${esc(m.text)}</textarea>
+      <select data-mf="level">${STRAT.map(([v,l])=>`<option value="${v}" ${m.level===v?'selected':''}>${v}. ${tr(l)}</option>`).join('')}</select><input type="text" data-mf="owner" placeholder="${T('Eigenaar','Owner')}" value="${esc(m.owner)}">
+      <input type="date" data-mf="due" value="${esc(m.due)}"><div class="row"><label class="chk grow" style="border:0;padding:0"><input type="checkbox" data-mf="done" ${m.done?'checked':''}>${T('Gereed','Done')}</label><button class="btn sm ghost danger" data-mdel="${n}">${T('Verwijder','Remove')}</button></div></div>`).join(''):`<p class="muted small" style="margin:6px 0 0">${T('Leg maatregelen vast volgens de arbeidshygiënische strategie: eerst de bron, dan collectief, dan individueel.','Record measures following the hierarchy of controls: source first, then collective, then individual.')}</p>`; };
+  triage(); evals(); measures();
+  $('#triage').onclick=async e=>{ const b=e.target.closest('[data-tri]'), a=e.target.closest('[data-addm]'); if(b){ t.triage[b.dataset.tri]=b.dataset.v==='1'; touchTask(t); triage(); } if(a){ const ne=await createEval(id,a.dataset.addm); location.hash='#/e/'+ne.id; } };
+  $('#addev').onclick=()=>methodSheet(id);
+  $('#addm').onclick=()=>{ t.measures.push({text:'',level:'1',owner:'',due:'',done:false}); touchTask(t); measures(); };
+  const mset=e=>{ const row=e.target.closest('[data-mi]'), k=e.target.dataset.mf; if(row&&k){ t.measures[+row.dataset.mi][k]=e.target.type==='checkbox'?e.target.checked:e.target.value; touchTask(t); } };
+  $('#measures').oninput=mset; $('#measures').onchange=mset;
+  $('#measures').onclick=e=>{ const d=e.target.closest('[data-mdel]'); if(d){ t.measures.splice(+d.dataset.mdel,1); touchTask(t); measures(); } };
+  $('#expt').onclick=()=>exportJSON(id);
+  $('#delt').onclick=async()=>{ if(!confirm(T('Deze taak met alle beoordelingen en foto\'s verwijderen?','Delete this task with all assessments and photos?')))return;
+    for(const p of photosOf(id)){ await Store.del('photos',p.id); await Store.del('blobs',p.id); } for(const e of taskEvals(id)) await Store.del('evals',e.id); await Store.del('tasks',id);
+    S.photos=S.photos.filter(p=>p.taskId!==id); S.evals=S.evals.filter(e=>e.taskId!==id); S.tasks=S.tasks.filter(x=>x.id!==id); location.hash='#/'; }; }
+function methodSheet(taskId){ openSheet(`<h2>${T('Kies een methode','Choose a method')}</h2>`+GROUPS.map(([g,l])=>`<div class="mgroup">${tr(l)}</div>`+Object.values(M).filter(m=>m.group===g).map(m=>`<button class="mitem" data-m="${m.id}"><b>${esc(tr(m.name))}</b><span class="small muted">${esc(tr(m.scope))}</span></button>`).join('')).join(''));
+  $('#panel').onclick=async e=>{ const b=e.target.closest('[data-m]'); if(b){ const ne=await createEval(taskId,b.dataset.m); $('#panel').onclick=null; location.hash='#/e/'+ne.id; } }; }
+async function createEval(taskId,method,phase='before',inputs,label=''){ const m=M[method], i=inputs?JSON.parse(JSON.stringify(inputs)):defaults(m);
+  const e={id:uid(),taskId,method,phase,label,inputs:i,notes:'',created:Date.now(),result:m.calc(i)}; S.evals.push(e); await Store.put('evals',e); touchTask(getTask(taskId)); return e; }
+
+/* ---- assessment view ---- */
+function fieldHtml(f,ctx,path){ if(f.show&&!f.show(ctx)) return ''; const v=ctx[f.k], a=`data-k="${f.k}"${path}`, help=f.h?`<span class="help">${esc(tr(f.h))}</span>`:'';
+  if(f.t==='chk') return `<label class="chk"><input type="checkbox" ${a} ${v?'checked':''}><span>${esc(tr(f.l))}</span></label>`;
+  if(f.t==='num') return `<label class="fld"><span class="lbl">${esc(tr(f.l))}</span><span class="numwrap"><input type="number" inputmode="decimal" ${a} value="${esc(v??'')}" ${f.min!==undefined?`min="${f.min}"`:''} ${f.max!==undefined?`max="${f.max}"`:''} step="${f.step||'any'}">${f.unit?`<span class="unit">${esc(tr(f.unit))}</span>`:''}</span>${help}</label>`;
+  if(f.t==='text') return `<label class="fld"><span class="lbl">${esc(tr(f.l))}</span><input type="text" ${a} value="${esc(v??'')}"></label>`;
+  if(f.t==='sel') return `<label class="fld"><span class="lbl">${esc(tr(f.l))}</span><select ${a}>${f.o.map(o=>`<option value="${o[0]}" ${String(v)===String(o[0])?'selected':''}>${esc(tr(o[1]))}</option>`).join('')}</select>${help}</label>`;
+  if(f.t==='seg') return `<div class="fld"><span class="lbl">${esc(tr(f.l))}</span><div class="seg" role="group">${f.o.map(o=>`<button type="button" ${a} data-v="${o[0]}" aria-pressed="${String(v)===String(o[0])}">${esc(tr(o[1]))}</button>`).join('')}</div>${help}</div>`;
+  if(f.t==='list'){ const arr=ctx[f.k]||[]; return arr.map((it,n)=>`<div class="sub"><div class="row"><b class="grow">${esc(tr(f.l))} ${n+1}</b>${arr.length>1?`<button class="btn sm ghost danger" data-lrem="${f.k}" data-idx="${n}">${T('Verwijder','Remove')}</button>`:''}</div>${f.item.map(s=>fieldHtml(s,it,` data-list="${f.k}" data-idx="${n}"`)).join('')}</div>`).join('')+`<button class="btn sm" data-ladd="${f.k}">${ico('plus')}${esc(tr(f.add))}</button>`; }
+  return ''; }
+function railHtml(r){ const hasNum=typeof r.score==='number'&&isFinite(r.score);
+  let g=''; if(r.scale&&typeof r.score==='number'){ let prev=0; const mx=r.scale.max; g='<div class="gauge">'+r.scale.cuts.map(([at,b])=>{ const w=(at-prev)/mx*100; prev=at; return `<span class="b-${b}" style="width:${w}%"></span>`; }).join('')+`<i style="left:${Math.min(100,Math.max(0,(hasNum?r.score:mx)/mx*100))}%"></i></div>`; }
+  const rows=(r.rows||[]).map(x=>`<div class="rrow"><span class="dot ${x.band?'b-'+x.band:''}"></span><span class="grow">${esc(tr(x.l))}</span><span class="muted">${esc(x.v===undefined?'':fmtN(x.v))}</span></div>`).join('');
+  const parts=(r.parts||[]).length?`<h3 style="margin:12px 0 8px">${esc(tr(r.partsTitle||['Opbouw van de score','What drives the score']))}</h3>`+r.parts.map(p=>`<div class="part"><span>${esc(tr(p.l))}</span><span class="muted">${esc(p.txt||fmtN(r1(p.v))+(p.max?' / '+fmtN(p.max):''))}</span><span class="track"><b style="width:${Math.min(100,Math.max(0,(p.pen!==undefined?p.pen:p.v/p.max)*100))}%"></b></span></div>`).join(''):'';
+  return {head:`<span class="big">${esc(scoreText(r))}${r.score!==null&&r.score!==undefined?`<small>${esc(r.label||T('punten','points'))}</small>`:''}</span><span class="grow verdict">${chip(r)}</span>`,gauge:g,
+    more:(r.formula?`<p class="small muted" style="margin:0 0 8px">${T('Berekening','Calculation')}: ${esc(fmtN(r.formula))}</p>`:'')+rows+parts+(r.notes||[]).map(n=>`<p class="note">${esc(tr(n))}</p>`).join('')+(r.flags||[]).map(f=>`<div class="flag">${esc(tr(f))}</div>`).join('')}; }
+function viewEval(id){ const e=getEval(id), m=M[e.method], t=getTask(e.taskId); $('#view').className='wide';
+  setBar(tr(m.short)+' — '+(t.title||T('taak','task')),'#/t/'+t.id);
+  $('#view').innerHTML=`<div class="evalgrid"><div>
+    <section class="card"><h2>${esc(tr(m.name))}</h2><p class="small muted" style="margin:0 0 12px">${esc(tr(m.scope))}${m.link?` <a href="${m.link}" target="_blank" rel="noopener">${T('Open TNO-tool','Open TNO tool')}</a>`:''}</p>
+      <div class="fgrid"><div class="fld"><span class="lbl">${T('Situatie','Situation')}</span><div class="seg"><button data-ph="before" aria-pressed="${e.phase==='before'}">${phaseName('before')}</button><button data-ph="after" aria-pressed="${e.phase==='after'}">${phaseName('after')}</button></div></div>
+      <label class="fld"><span class="lbl">${T('Kenmerk (optioneel)','Label (optional)')}</span><input type="text" id="elabel" value="${esc(e.label)}" placeholder="${T('bv. rechterhand, lijn 3','e.g. right hand, line 3')}"></label></div></section>
+    <div id="steps"></div>
+    <section class="card"><h2>${T('Foto\'s bij deze beoordeling','Photos for this assessment')}</h2><div class="photos" id="ephotos"></div></section>
+    <section class="card"><label class="fld" style="margin:0"><span class="lbl">${T('Toelichting','Notes')}</span><textarea id="enotes">${esc(e.notes)}</textarea></label><p class="ref">${esc(m.ref)}</p></section>
+    <div class="row noprint" style="flex-wrap:wrap">${e.phase==='before'?`<button class="btn" id="redo">${T('Opnieuw beoordelen na maatregelen','Re-assess after measures')}</button>`:''}<span class="grow"></span><button class="btn danger" id="dele">${T('Beoordeling verwijderen','Delete assessment')}</button></div>
+  </div><aside class="rail" id="rail"><button class="railhead" id="railhead" aria-expanded="false"></button><div id="railgauge"></div><div class="more" id="railmore"></div></aside></div>`;
+  const steps=()=>{ $('#steps').innerHTML=m.steps.map((s,n)=>`<section class="card step"><h2><span class="n">${n+1}</span>${esc(tr(s.title))}</h2>${s.fields.map(f=>fieldHtml(f,e.inputs,'')).join('')}</section>`).join(''); };
+  const rail=()=>{ e.result=m.calc(e.inputs); const h=railHtml(e.result); $('#railhead').innerHTML=h.head; $('#railgauge').innerHTML=h.gauge; $('#railmore').innerHTML=h.more; saveSoon('evals',e); };
+  steps(); rail(); renderPhotos($('#ephotos'),t.id,e.id);
+  $('#railhead').onclick=()=>{ const o=$('#rail').classList.toggle('open'); $('#railhead').setAttribute('aria-expanded',o); };
+  const target=el=>el.dataset.list?e.inputs[el.dataset.list][+el.dataset.idx]:e.inputs;
+  $('#steps').oninput=ev=>{ const el=ev.target; if(el.dataset.k&&(el.type==='number'||el.type==='text')){ target(el)[el.dataset.k]=el.value; rail(); } };
+  $('#steps').onchange=ev=>{ const el=ev.target; if(!el.dataset.k) return; if(el.type==='checkbox'){ target(el)[el.dataset.k]=el.checked; steps(); rail(); } else if(el.tagName==='SELECT'){ target(el)[el.dataset.k]=el.value; steps(); rail(); } };
+  $('#steps').onclick=ev=>{ const b=ev.target.closest('button'); if(!b) return;
+    if(b.dataset.v!==undefined&&b.dataset.k){ target(b)[b.dataset.k]=b.dataset.v; steps(); rail(); }
+    else if(b.dataset.ladd){ const f=m.steps.flatMap(s=>s.fields).find(f=>f.k===b.dataset.ladd), it={}; f.item.forEach(s=>{ if(s.def!==undefined) it[s.k]=s.def; }); e.inputs[f.k].push(it); steps(); rail(); }
+    else if(b.dataset.lrem){ e.inputs[b.dataset.lrem].splice(+b.dataset.idx,1); steps(); rail(); } };
+  $$('[data-ph]').forEach(b=>b.onclick=()=>{ e.phase=b.dataset.ph; saveSoon('evals',e); viewEval(id); });
+  $('#elabel').oninput=ev=>{ e.label=ev.target.value; saveSoon('evals',e); }; $('#enotes').oninput=ev=>{ e.notes=ev.target.value; saveSoon('evals',e); };
+  if($('#redo')) $('#redo').onclick=async()=>{ const ne=await createEval(t.id,e.method,'after',e.inputs,e.label); location.hash='#/e/'+ne.id; };
+  $('#dele').onclick=async()=>{ if(!confirm(T('Deze beoordeling verwijderen?','Delete this assessment?')))return; clearTimeout(timers[e.id]); for(const p of photosOf(t.id,e.id)){ p.evalId=null; await Store.put('photos',p); } await Store.del('evals',e.id); S.evals=S.evals.filter(x=>x.id!==e.id); location.hash='#/t/'+t.id; }; }
+
+/* ---- photos ---- */
+let photoTarget=null;
+function renderPhotos(el,taskId,evalId){ const ps=photosOf(taskId,evalId);
+  el.innerHTML=ps.map(p=>`<button class="ph" data-photo="${p.id}" title="${esc(p.caption)}"><img src="${p.thumb}" alt="${esc(p.caption||T('Foto','Photo'))}"></button>`).join('')+`<button class="ph add" data-addphoto>${ico('cam')}<span>${T('Foto','Photo')}</span></button>`;
+  el.onclick=ev=>{ const p=ev.target.closest('[data-photo]'); if(p) return openEditor(p.dataset.photo,()=>renderPhotos(el,taskId,evalId));
+    if(ev.target.closest('[data-addphoto]')){ photoTarget={el,taskId,evalId}; $('#file').value=''; $('#file').click(); } }; }
+$('#file').onchange=async ev=>{ const tg=photoTarget; if(!tg) return; for(const f of ev.target.files){ try{ await addPhoto(f,tg.taskId,tg.evalId); }catch(err){ alert(T('Foto kon niet worden gelezen: ','Could not read photo: ')+f.name); } } renderPhotos(tg.el,tg.taskId,tg.evalId); touchTask(getTask(tg.taskId)); };
+async function loadBitmap(blob){ if(window.createImageBitmap){ try{ return await createImageBitmap(blob,{imageOrientation:'from-image'}); }catch(e){} }
+  return new Promise((res,rej)=>{ const im=new Image(), u=URL.createObjectURL(blob); im.onload=()=>{URL.revokeObjectURL(u);res(im);}; im.onerror=rej; im.src=u; }); }
+const toBlob=(c,q=.86)=>new Promise(r=>c.toBlob(r,'image/jpeg',q));
+function scaled(src,max){ const w=src.width,h=src.height,k=Math.min(1,max/Math.max(w,h)),c=document.createElement('canvas'); c.width=Math.round(w*k); c.height=Math.round(h*k); c.getContext('2d').drawImage(src,0,0,c.width,c.height); return c; }
+async function addPhoto(file,taskId,evalId){ const bmp=await loadBitmap(file), c=scaled(bmp,1600), full=await toBlob(c);
+  const p={id:uid(),taskId,evalId:evalId||null,caption:'',thumb:scaled(c,320).toDataURL('image/jpeg',.8),w:c.width,h:c.height,ann:[],scale:null,created:Date.now()};
+  S.photos.push(p); await Store.put('photos',p); await Store.put('blobs',{id:p.id,full,base:full}); return p; }
+
+/* ---- photo editor: arrow, angle, ruler, text, blur (burned in) ---- */
+const ED={};
+async function openEditor(photoId,onClose){ const p=S.photos.find(x=>x.id===photoId), bl=await Store.get('blobs',photoId); if(!p||!bl) return;
+  const base=scaled(await loadBitmap(bl.base||bl.full),4000); Object.assign(ED,{p,base,ann:JSON.parse(JSON.stringify(p.ann||[])),scale:p.scale,tool:'arrow',pts:[],drag:null,undo:[],dirty:false,onClose});
+  const tools=[['arrow',T('Pijl','Arrow')],['angle',T('Hoek','Angle')],['ruler',T('Maat','Measure')],['text',T('Tekst','Text')],['blur',T('Vervaag','Blur')]];
+  $('#editor').innerHTML=`<div class="top"><button id="edx">${T('Sluit','Close')}</button><button id="eddel">${T('Verwijder','Delete')}</button><span style="flex:1"></span><button id="edsave" style="background:#F2C200;color:#111;border-color:#F2C200">${T('Bewaar','Save')}</button></div>
+    <div class="top" style="padding-top:0"><input class="cap" id="edcap" type="text" placeholder="${T('Bijschrift voor het rapport','Caption for the report')}" value="${esc(p.caption)}"></div>
+    <div class="stage"><canvas id="edc"></canvas><div class="ask" id="edask"><input type="text" id="edin"><button id="edok">OK</button></div><div class="hint" id="edhint"></div></div>
+    <div class="tools">${tools.map(([k,l])=>`<button data-tool="${k}" aria-pressed="${k==='arrow'}">${l}</button>`).join('')}<button id="edundo">${T('Herstel','Undo')}</button></div>`;
+  $('#editor').classList.add('on'); const cv=$('#edc'); cv.width=base.width; cv.height=base.height; edHint(); edDraw();
+  const pt=ev=>{ const r=cv.getBoundingClientRect(); return {x:(ev.clientX-r.left)*cv.width/r.width,y:(ev.clientY-r.top)*cv.height/r.height}; };
+  cv.onpointerdown=ev=>{ ev.preventDefault(); if($('#edask').classList.contains('on')) return; const q=pt(ev);
+    if(ED.tool==='angle'){ ED.pts.push(q); if(ED.pts.length===3){ ED.ann.push({t:'angle',p:ED.pts}); ED.undo.push('ann'); ED.pts=[]; ED.dirty=true; } edHint(); edDraw(); }
+    else if(ED.tool==='text'){ edAsk(T('Tekst','Text'),'text',v=>{ if(v){ ED.ann.push({t:'text',a:q,s:v}); ED.undo.push('ann'); ED.dirty=true; edDraw(); } }); }
+    else { ED.drag={a:q,b:q}; cv.setPointerCapture(ev.pointerId); } };
+  cv.onpointermove=ev=>{ if(ED.drag){ ED.drag.b=pt(ev); edDraw(); } };
+  cv.onpointerup=()=>{ const d=ED.drag; ED.drag=null; if(!d) return; const len=Math.hypot(d.b.x-d.a.x,d.b.y-d.a.y); if(len<edU()*6){ edDraw(); return; }
+    if(ED.tool==='arrow'){ ED.ann.push({t:'arrow',a:d.a,b:d.b}); ED.undo.push('ann'); }
+    else if(ED.tool==='ruler'){ const add=()=>{ ED.ann.push({t:'ruler',a:d.a,b:d.b}); ED.undo.push('ann'); edHint(); edDraw(); };
+      if(!ED.scale) edAsk(T('Werkelijke lengte van deze lijn in cm (referentie)','Real length of this line in cm (reference)'),'number',v=>{ const n=num(v); if(n>0){ ED.scale=n/len; add(); } else edDraw(); }); else add(); }
+    else if(ED.tool==='blur'){ const x=Math.round(Math.min(d.a.x,d.b.x)),y=Math.round(Math.min(d.a.y,d.b.y)),w=Math.round(Math.abs(d.b.x-d.a.x)),h=Math.round(Math.abs(d.b.y-d.a.y)); if(w>4&&h>4){ const bx=base.getContext('2d'); ED.undo.push({x,y,img:bx.getImageData(x,y,w,h)});
+        const bs=Math.max(10,Math.max(w,h)/7), tw=Math.max(1,Math.ceil(w/bs)), th=Math.max(1,Math.ceil(h/bs)), tmp=document.createElement('canvas'); tmp.width=tw; tmp.height=th; const tc=tmp.getContext('2d'); tc.imageSmoothingEnabled=true; tc.drawImage(base,x,y,w,h,0,0,tw,th); bx.imageSmoothingEnabled=false; bx.drawImage(tmp,0,0,tw,th,x,y,w,h); bx.imageSmoothingEnabled=true; } }
+    ED.dirty=true; edDraw(); };
+  $('#editor .tools').onclick=ev=>{ const b=ev.target.closest('[data-tool]'); if(b){ ED.tool=b.dataset.tool; ED.pts=[]; $$('[data-tool]').forEach(x=>x.setAttribute('aria-pressed',x===b)); edHint(); edDraw(); } };
+  $('#edundo').onclick=()=>{ if(ED.pts.length){ ED.pts.pop(); } else { const u=ED.undo.pop(); if(u==='ann'){ ED.ann.pop(); if(!ED.ann.some(a=>a.t==='ruler')) ED.scale=null; } else if(u) base.getContext('2d').putImageData(u.img,u.x,u.y); } edHint(); edDraw(); };
+  $('#edx').onclick=()=>{ if(ED.dirty&&!confirm(T('Wijzigingen niet bewaren?','Discard changes?'))) return; edClose(); };
+  $('#eddel').onclick=async()=>{ if(!confirm(T('Deze foto verwijderen?','Delete this photo?'))) return; await Store.del('photos',p.id); await Store.del('blobs',p.id); S.photos=S.photos.filter(x=>x.id!==p.id); edClose(); };
+  $('#edsave').onclick=async()=>{ const out=document.createElement('canvas'); out.width=base.width; out.height=base.height; const c=out.getContext('2d'); c.drawImage(base,0,0); edPaint(c,ED.ann);
+    p.caption=$('#edcap').value; p.ann=ED.ann; p.scale=ED.scale; p.thumb=scaled(out,320).toDataURL('image/jpeg',.8); await Store.put('blobs',{id:p.id,full:await toBlob(out),base:await toBlob(base,.9)}); await Store.put('photos',p); edClose(); }; }
+function edClose(){ $('#editor').classList.remove('on'); $('#editor').innerHTML=''; const f=ED.onClose; ED.base=null; if(f) f(); }
+function edAsk(label,type,cb){ const a=$('#edask'), i=$('#edin'); i.type=type; i.value=''; i.placeholder=label; if(type==='number') i.inputMode='decimal'; a.classList.add('on'); i.focus();
+  const done=()=>{ a.classList.remove('on'); cb(i.value.trim()); }; $('#edok').onclick=done; i.onkeydown=e=>{ if(e.key==='Enter') done(); }; }
+function edHint(){ const h={arrow:T('Sleep om een pijl te tekenen','Drag to draw an arrow'),angle:[T('Tik het eerste punt (bv. schouder)','Tap the first point (e.g. shoulder)'),T('Tik het draaipunt (bv. elleboog)','Tap the vertex (e.g. elbow)'),T('Tik het derde punt (bv. pols)','Tap the third point (e.g. wrist)')][ED.pts.length],ruler:ED.scale?T('Sleep om een afstand te meten','Drag to measure a distance'):T('Sleep eerst over een bekende lengte als referentie','First drag along a known length as reference'),text:T('Tik waar de tekst moet komen','Tap where the text should go'),blur:T('Sleep over gezichten of naamkaartjes; dit wordt in de foto gebrand','Drag over faces or name tags; this is burned into the photo')}[ED.tool]; $('#edhint').textContent=h+(ED.tool==='angle'||ED.tool==='ruler'?T(' — alleen betrouwbaar bij een foto haaks op het bewegingsvlak',' — only reliable when shot square to the plane of movement'):''); }
+const edU=()=>Math.max(ED.base.width,ED.base.height)/420;
+function edDraw(){ const cv=$('#edc'); if(!cv) return; const c=cv.getContext('2d'); c.drawImage(ED.base,0,0); const tmp=[...ED.ann]; const d=ED.drag;
+  if(d){ if(ED.tool==='blur'){ edPaint(c,tmp); c.save(); c.setLineDash([edU()*3,edU()*3]); c.lineWidth=edU(); c.strokeStyle='#F2C200'; c.strokeRect(d.a.x,d.a.y,d.b.x-d.a.x,d.b.y-d.a.y); c.restore(); return; } tmp.push({t:ED.tool,a:d.a,b:d.b}); }
+  edPaint(c,tmp); if(ED.pts.length){ c.fillStyle='#F2C200'; ED.pts.forEach(q=>{ c.beginPath(); c.arc(q.x,q.y,edU()*2.5,0,7); c.fill(); }); } }
+function edPaint(c,anns){ const u=edU(), Y='#F2C200', K='rgba(10,16,20,.85)'; c.lineCap='round'; c.lineJoin='round';
+  const line=(a,b)=>{ c.strokeStyle=K; c.lineWidth=u*3.2; c.beginPath(); c.moveTo(a.x,a.y); c.lineTo(b.x,b.y); c.stroke(); c.strokeStyle=Y; c.lineWidth=u*1.6; c.beginPath(); c.moveTo(a.x,a.y); c.lineTo(b.x,b.y); c.stroke(); };
+  const label=(s,x,y)=>{ c.font=`600 ${u*9}px system-ui,sans-serif`; const w=c.measureText(s).width+u*8,h=u*14; x=Math.min(Math.max(x-w/2,2),c.canvas.width-w-2); y=Math.min(Math.max(y-h/2,2),c.canvas.height-h-2); c.fillStyle=K; c.beginPath(); c.roundRect?c.roundRect(x,y,w,h,u*3):c.rect(x,y,w,h); c.fill(); c.fillStyle=Y; c.textBaseline='middle'; c.fillText(s,x+u*4,y+h/2+u*.5); };
+  for(const a of anns){
+    if(a.t==='arrow'){ const ang=Math.atan2(a.b.y-a.a.y,a.b.x-a.a.x), hl=u*9; line(a.a,a.b); line(a.b,{x:a.b.x-hl*Math.cos(ang-.45),y:a.b.y-hl*Math.sin(ang-.45)}); line(a.b,{x:a.b.x-hl*Math.cos(ang+.45),y:a.b.y-hl*Math.sin(ang+.45)}); }
+    else if(a.t==='ruler'){ const ang=Math.atan2(a.b.y-a.a.y,a.b.x-a.a.x)+Math.PI/2, k=u*4, tick=q=>line({x:q.x-k*Math.cos(ang),y:q.y-k*Math.sin(ang)},{x:q.x+k*Math.cos(ang),y:q.y+k*Math.sin(ang)}); line(a.a,a.b); tick(a.a); tick(a.b);
+      const px=Math.hypot(a.b.x-a.a.x,a.b.y-a.a.y); if(ED.scale||a.cm) label(fmtN(Math.round((a.cm||px*ED.scale)))+' cm',(a.a.x+a.b.x)/2,(a.a.y+a.b.y)/2-u*10); }
+    else if(a.t==='angle'){ const [p1,v,p2]=a.p; line(v,p1); line(v,p2); const a1=Math.atan2(p1.y-v.y,p1.x-v.x), a2=Math.atan2(p2.y-v.y,p2.x-v.x); let dlt=a2-a1; while(dlt>Math.PI)dlt-=2*Math.PI; while(dlt<-Math.PI)dlt+=2*Math.PI;
+      const rad=Math.min(u*22,Math.hypot(p1.x-v.x,p1.y-v.y)*.5,Math.hypot(p2.x-v.x,p2.y-v.y)*.5); c.strokeStyle=Y; c.lineWidth=u*1.2; c.beginPath(); c.arc(v.x,v.y,rad,a1,a2,dlt<0); c.stroke(); const mid=a1+dlt/2; label(Math.round(Math.abs(dlt)*180/Math.PI)+'°',v.x+Math.cos(mid)*(rad+u*14),v.y+Math.sin(mid)*(rad+u*14)); }
+    else if(a.t==='text'){ label(a.s,a.a.x,a.a.y); } } }
+
+/* ---- report ---- */
+let RPT={full:true}, rptUrls=[];
+function inputRows(m,inputs){ const out=[]; const val=(f,ctx)=>{ const v=ctx[f.k]; if(f.show&&!f.show(ctx)) return null;
+    if(f.t==='chk') return v?T('Ja','Yes'):null; if(f.t==='num') return (v===''||v===undefined||v===null)?null:fmtN(v)+(f.unit?' '+tr(f.unit):'');
+    if(f.t==='text') return v||null; if(String(v)==='0') return null; const o=f.o&&f.o.find(o=>String(o[0])===String(v)); return o?tr(o[1]):null; };
+  m.steps.forEach(s=>s.fields.forEach(f=>{ if(f.t==='list'){ (inputs[f.k]||[]).forEach((it,n)=>out.push([tr(f.l)+' '+(n+1),f.item.map(sf=>{ const x=val(sf,it); return x===null?null:tr(sf.l)+': '+x; }).filter(Boolean).join(' · ')])); } else { const x=val(f,inputs); if(x!==null) out.push([tr(f.l),x]); } })); return out; }
+const topParts=r=>(r.parts||[]).map(p=>({p,s:p.pen!==undefined?p.pen:(p.max?p.v/p.max:0)})).filter(x=>x.s>0.001).sort((a,b)=>b.s-a.s).slice(0,3).map(x=>tr(x.p.l)).concat((r.parts||[]).length?[]:(r.rows||[]).filter(x=>x.band==='r'||x.band==='o').slice(0,4).map(x=>tr(x.l)));
+async function viewReport(id){ const t=getTask(id), ev=taskEvals(id); $('#view').className='wide';
+  setBar(T('Rapport','Report'),'#/t/'+id,`<button id="rmode"><span>${RPT.full?T('Volledig','Full'):T('Compact','Compact')}</span></button><button id="rprint">${ico('print')}<span>${T('Afdrukken','Print')}</span></button>`);
+  rptUrls.forEach(u=>URL.revokeObjectURL(u)); rptUrls=[]; const url={};
+  for(const p of photosOf(id)){ const b=await Store.get('blobs',p.id); if(b&&b.full){ url[p.id]=URL.createObjectURL(b.full); rptUrls.push(url[p.id]); } else url[p.id]=p.thumb; }
+  ev.forEach(e=>e.result=M[e.method].calc(e.inputs));
+  const fig=p=>`<figure><img src="${url[p.id]}" alt=""><figcaption>${esc(p.caption)}</figcaption></figure>`;
+  const tp=photosOf(id,null), hero=tp[0]||photosOf(id)[0];
+  const groups={}; ev.forEach(e=>{ const k=e.method+'|'+(e.label||''); (groups[k]=groups[k]||{m:M[e.method],label:e.label,before:[],after:[]})[e.phase==='after'?'after':'before'].push(e); });
+  const cell=list=>list.length?list.map(e=>`<div class="row" style="gap:8px;flex-wrap:wrap"><b>${esc(scoreText(e.result))}</b>${chip(e.result)}</div>`).join(''):'<span class="muted">–</span>';
+  const hasAfter=ev.some(e=>e.phase==='after'), cur=currentEvals(id), overall=worst(cur.map(e=>e.result.band));
+  const issues=cur.filter(e=>e.result.band&&e.result.band!=='g').map(e=>({e,parts:topParts(e.result)})).filter(x=>x.parts.length);
+  const evCard=e=>{ const m=M[e.method], r=e.result, h=railHtml(r), eph=photosOf(id,e.id);
+    return `<div class="rcard"><div class="row" style="flex-wrap:wrap;margin-bottom:6px"><h3 class="grow">${esc(tr(m.name))}${e.label?' — '+esc(e.label):''} <span class="tag ${e.phase}">${phaseName(e.phase)}</span></h3><b style="font-size:1.2rem">${esc(scoreText(r))}</b>${chip(r)}</div>${h.gauge}
+      <div class="rcols" style="margin-top:10px"><div><table>${inputRows(m,e.inputs).map(([l,v])=>`<tr><td class="muted" style="width:55%">${esc(l)}</td><td>${esc(v)}</td></tr>`).join('')}</table></div><div>${h.more}</div></div>
+      ${e.notes?`<p class="note"><b>${T('Toelichting','Notes')}:</b> ${esc(e.notes)}</p>`:''}${eph.length?`<div class="rphotos">${eph.map(fig).join('')}</div>`:''}<p class="ref">${esc(m.ref)}</p></div>`; };
+  $('#view').innerHTML=`<article class="report">
+    <p class="muted small" style="margin:0">${T('Beoordeling fysieke belasting','Physical workload assessment')}</p><h1>${esc(t.title||T('Naamloze taak','Untitled task'))}</h1>
+    <div class="meta">${[[T('Afdeling','Department'),t.dept],[T('Werkplek / lijn','Workstation / line'),t.station],[T('Beoordelaar','Assessor'),t.assessor],[T('Datum','Date'),fmtD(t.date)],[T('Aantal medewerkers','Number of workers'),t.exposed],[T('Uren per dag','Hours per day'),t.hours]].map(([l,v])=>`<div><span>${l}</span>${esc(v||'–')}</div>`).join('')}</div>
+    <div class="${hero?'rhero':''}"><div>${t.desc?`<p style="margin-top:0;white-space:pre-wrap">${esc(t.desc)}</p>`:''}
+      <h2 style="margin-top:${t.desc?'14px':'0'}">${T('Samenvatting','Summary')}</h2>
+      ${ev.length?`<p style="margin:0 0 8px">${T('Eindoordeel huidige situatie','Overall verdict, current state')}: ${chip({band:overall,levels:4})}</p><table><tr><th>${T('Methode','Method')}</th><th>${phaseName('before')}</th>${hasAfter?`<th>${phaseName('after')}</th>`:''}</tr>${Object.values(groups).map(g=>`<tr><td><b>${esc(tr(g.m.short))}</b>${g.label?'<br><span class="muted">'+esc(g.label)+'</span>':''}</td><td>${cell(g.before)}</td>${hasAfter?`<td>${cell(g.after)}</td>`:''}</tr>`).join('')}</table>`:`<p class="muted">${T('Nog geen beoordelingen.','No assessments yet.')}</p>`}
+      </div>${hero?`<figure style="margin:0"><img src="${url[hero.id]}" alt=""><figcaption class="small muted">${esc(hero.caption)}</figcaption></figure>`:''}</div>
+    ${issues.length?`<h2>${T('Belangrijkste knelpunten','Main contributing factors')}</h2><table>${issues.map(x=>`<tr><td style="width:30%"><b>${esc(tr(x.e.method&&M[x.e.method].short))}</b></td><td>${esc(x.parts.join(', '))}</td></tr>`).join('')}</table>`:''}
+    ${t.triage&&t.triage.health?`<p class="note"><b>${T('Let op','Note')}:</b> ${T('er zijn gezondheidsklachten gemeld die met het werk te maken kunnen hebben.','health complaints that may be work-related have been reported.')}</p>`:''}
+    <h2>${T('Maatregelen','Measures')}</h2>${t.measures.length?`<table><tr><th>${T('Maatregel','Measure')}</th><th>${T('Niveau','Level')}</th><th>${T('Eigenaar','Owner')}</th><th>${T('Gereed voor','Due')}</th><th>${T('Status','Status')}</th></tr>${[...t.measures].sort((a,b)=>a.level.localeCompare(b.level)).map(m=>`<tr><td>${esc(m.text)}</td><td>${esc(m.level+'. '+tr((STRAT.find(s=>s[0]===m.level)||STRAT[0])[1]))}</td><td>${esc(m.owner)}</td><td>${esc(fmtD(m.due))}</td><td>${m.done?T('Gereed','Done'):T('Open','Open')}</td></tr>`).join('')}</table>`:`<p class="muted">${T('Geen maatregelen vastgelegd.','No measures recorded.')}</p>`}
+    ${RPT.full&&ev.length?`<h2 class="pagebreak">${T('Beoordelingen in detail','Assessments in detail')}</h2>${ev.map(evCard).join('')}`:''}
+    ${tp.length>(hero&&!hero.evalId?1:0)?`<h2>${T('Foto\'s','Photos')}</h2><div class="rphotos">${tp.filter(p=>p!==hero).map(fig).join('')}</div>`:''}
+    <div class="sign"><div>${T('Beoordelaar','Assessor')}${t.assessor?': '+esc(t.assessor):''}</div><div>${T('Leidinggevende / akkoord','Manager / approval')}</div></div>
+    <p class="ref">${T('Opgesteld met','Prepared with')} ErgoFlow ${VERSION}. ${T('De methoden geven een risico-inschatting op taakniveau; bij klachten of meerdere zware taken per dag een deskundige raadplegen.','The methods give a task-level risk estimate; with complaints or several heavy tasks per day, consult an expert.')}</p></article>`;
+  $('#rmode').onclick=()=>{ RPT.full=!RPT.full; viewReport(id); };
+  $('#rprint').onclick=async()=>{ await Promise.all($$('.report img').map(im=>im.complete?1:new Promise(r=>{im.onload=im.onerror=r;}))); window.print(); }; }
+
+/* ---- export / import ---- */
+const blobToData=b=>new Promise(r=>{ const f=new FileReader(); f.onload=()=>r(f.result); f.readAsDataURL(b); });
+const dataToBlob=async d=>(await fetch(d)).blob();
+async function exportJSON(taskId){ const tasks=taskId?[getTask(taskId)]:S.tasks, ids=new Set(tasks.map(t=>t.id)), photos=[];
+  for(const p of S.photos.filter(p=>ids.has(p.taskId))){ const b=await Store.get('blobs',p.id); photos.push(Object.assign({},p,{full:b?await blobToData(b.full):null,base:b&&b.base!==b.full?await blobToData(b.base):null})); }
+  const data={app:'ergoflow',format:1,version:VERSION,exported:new Date().toISOString(),tasks,evals:S.evals.filter(e=>ids.has(e.taskId)).map(e=>Object.assign({},e,{result:undefined})),photos};
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'})); a.download='ergoflow-'+(taskId?(tasks[0].title||'taak').replace(/[^\w-]+/g,'_').slice(0,40):'export')+'-'+today()+'.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); }
+$('#imp').onchange=async ev=>{ const f=ev.target.files[0]; if(!f) return; try{ const d=JSON.parse(await f.text()); if(d.app!=='ergoflow') throw 0;
+    for(const t of d.tasks||[]) await Store.put('tasks',t); for(const e of d.evals||[]) await Store.put('evals',e);
+    for(const p of d.photos||[]){ const {full,base,...meta}=p; await Store.put('photos',meta); if(full){ const fb=await dataToBlob(full); await Store.put('blobs',{id:p.id,full:fb,base:base?await dataToBlob(base):fb}); } }
+    await loadAll(); closeSheet(); route(); alert(T('Import gereed: ','Import complete: ')+(d.tasks||[]).length+' '+T('taken','tasks')); }
+  catch(e){ alert(T('Dit is geen geldig ErgoFlow-bestand.','This is not a valid ErgoFlow file.')); } ev.target.value=''; };
+
+/* ---- boot ---- */
+async function loadAll(){ [S.tasks,S.evals,S.photos]=await Promise.all([Store.all('tasks'),Store.all('evals'),Store.all('photos')]);
+  S.evals=S.evals.filter(e=>M[e.method]); S.evals.forEach(e=>{ try{ e.result=M[e.method].calc(e.inputs); }catch(err){ e.result={band:null,score:null}; } }); S.tasks.forEach(t=>{ t.triage=t.triage||{}; t.measures=t.measures||[]; }); }
+(async()=>{ document.documentElement.lang=LANG; try{ await Store.open(); await loadAll(); }catch(e){ $('#view').innerHTML=`<div class="empty">${T('Opslag is niet beschikbaar in deze browser (privémodus?).','Storage is not available in this browser (private mode?).')}</div>`; return; } route(); })();
+</script>
+</body>
+</html>
