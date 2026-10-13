@@ -2205,5 +2205,6 @@ async function loadAll(){ [S.tasks,S.evals,S.photos]=await Promise.all([Store.al
   S.evals=S.evals.filter(e=>M[e.method]); S.evals.forEach(e=>{ try{ normalizeInputs(e); e.result=M[e.method].calc(e.inputs); }catch(err){ e.result={band:null,score:null}; } }); S.tasks.forEach(t=>{ t.triage=t.triage||{}; t.measures=t.measures||[]; }); }
 (async()=>{ document.documentElement.lang=LANG; setBar('ErgoFlow',null); $('#view').innerHTML=`<div class="empty">${T('Laden…','Loading…')}</div>`; try{ await Store.open(); await loadAll(); }catch(e){ $('#view').innerHTML=`<div class="empty">${T('Opslag is niet beschikbaar in deze browser (privémodus?).','Storage is not available in this browser (private mode?).')}</div>`; return; } route(); })();
 </script>
+<script>/* offline shell: see sw.js */ if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(e=>console.warn("sw",e));</script>
 </body>
 </html>
