@@ -127,21 +127,6 @@ select{appearance:none;padding-right:30px;background-image:url("data:image/svg+x
 .mitem{display:block;width:100%;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--rads);padding:10px 12px;margin-bottom:6px}
 .mitem:hover{border-color:var(--accent)}
 .mitem b{display:block}
-#editor{position:fixed;inset:0;z-index:50;background:#0d1419;display:none;flex-direction:column;color:#fff;touch-action:none}
-#editor.on{display:flex}
-#editor .top,#editor .tools{display:flex;align-items:center;gap:6px;padding:8px;flex:none;overflow-x:auto}
-#editor .top{padding-top:calc(8px + env(safe-area-inset-top))}
-#editor .tools{padding-bottom:calc(8px + env(safe-area-inset-bottom));justify-content:safe center}
-#editor .tools button{padding:0 10px;font-size:.9rem}
-#editor button{background:#1d2a33;color:#fff;border:1px solid #33434f;border-radius:8px;height:40px;padding:0 12px;font-weight:550;white-space:nowrap}
-#editor button[aria-pressed=true]{background:#F2C200;color:#111;border-color:#F2C200}
-#editor .stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative}
-#editor canvas{max-width:100%;max-height:100%;touch-action:none}
-#editor .ask{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:#1d2a33;border:1px solid #33434f;border-radius:10px;padding:8px;display:none;gap:6px;align-items:center;width:min(92%,420px)}
-#editor .ask.on{display:flex}
-#editor .ask input{height:38px;color:#111}
-#editor .hint{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:.82rem;color:#c8d3db;pointer-events:none;text-shadow:0 1px 2px #000}
-#editor input.cap{flex:1;min-width:120px;background:#1d2a33;border:1px solid #33434f;color:#fff;height:40px}
 /* measures */
 .measure{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 0;border-top:1px solid var(--soft)}
 .measure .full{grid-column:1/-1}
@@ -183,7 +168,7 @@ select{appearance:none;padding-right:30px;background-image:url("data:image/svg+x
 <header class="bar" id="bar"></header>
 <main id="view"></main>
 <div id="sheet"><div class="panel" id="panel"></div></div>
-<div id="editor"></div>
+
 <input type="file" id="file" accept="image/*" multiple hidden>
 <input type="file" id="imp" accept="application/json,.json" hidden>
 <script>
@@ -1448,7 +1433,7 @@ CHOOSE.push=['Twijfel? Begin met KIM-PP. Wil je weten hoe zwaar de kar mag zijn,
   add('lift',['lmlift','carry','es_lift']); add('push',['liberty','es_push']); add('hand',['rsi','es_rep']); add('care',['ptai','mapo','es_care']); add('stand',['es_stand','es_sit']); add('kneel',['es_kneel']); add('screen',['rab','es_screen']); add('fatigue',['es_fatigue']); add('posture',['es_post']); })();
 
 /* ===================== ErgoFlow app ===================== */
-const VERSION='0.7.1';
+const VERSION='0.7.2';
 let LANG=(()=>{try{return localStorage.getItem('ergoflow.lang')}catch(e){return null}})()||'nl';
 const T=(nl,en)=>LANG==='nl'?nl:en, tr=x=>Array.isArray(x)?x[LANG==='nl'?0:1]:(x??'');
 tr_=T;
@@ -1476,8 +1461,8 @@ const Local={ db:null,
   put(s,v){return this.tx(s,'readwrite',o=>o.put(v));}, del(s,id){return this.tx(s,'readwrite',o=>o.delete(id));} };
 const COLLS=['tasks','evals','photos'];
 const payloadOf=o=>{ const p=Object.assign({},o); delete p.id; delete p.result; delete p.fresh; delete p._pending; delete p._deleted; return p; };
-const loadScript=(src,ms)=>new Promise(res=>{ if(window.SfhaSync) return res(true); const el=document.createElement('script'); let done=false; const fin=v=>{ if(!done){ done=true; res(v); } };
-  el.src=src; el.onload=()=>fin(!!window.SfhaSync); el.onerror=()=>fin(false); setTimeout(()=>fin(!!window.SfhaSync),ms); document.head.appendChild(el); });
+const loadScript=(src,ms,ready=()=>!!window.SfhaSync)=>new Promise(res=>{ if(ready()) return res(true); const el=document.createElement('script'); let done=false; const fin=v=>{ if(!done){ done=true; res(v); } };
+  el.src=src; el.onload=()=>fin(ready()); el.onerror=()=>fin(false); setTimeout(()=>fin(ready()),ms); document.head.appendChild(el); });
 const Store={ mode:'local', own:new Map(),
   async open(){ try{ await Local.open(); }catch(e){}
     if(await loadScript(SYNC_URL,6000)){ try{ await SfhaSync.init({app:APP}); this.mode='sync'; await migrateOld(); await drainPending(); SfhaSync.onChange(onSyncChange); SfhaSync.onStatus(syncDot); }catch(e){ console.warn('ErgoFlow: sync layer unavailable, using local storage',e); this.mode='local'; } }
@@ -1505,7 +1490,7 @@ let lastInput=0, refreshT=null; document.addEventListener('input',()=>{ lastInpu
 function onSyncChange(ev){ if(ev.asset){ if(location.hash.startsWith('#/r/')&&S.photos.some(p=>p.full&&p.full.hash===ev.asset)) scheduleRefresh(); return; }
   if(ev.app!==APP) return; let ext=false; for(const id of ev.ids||[]){ if(Store.own.get(id)) Store.mark(id,-1); else ext=true; } if(ext) scheduleRefresh(); }
 function scheduleRefresh(ms=500){ clearTimeout(refreshT); refreshT=setTimeout(doRefresh,ms); }
-async function doRefresh(){ if(Date.now()-lastInput<3000||$('#editor').classList.contains('on')||$('#sheet').classList.contains('on')) return scheduleRefresh(1500);
+async function doRefresh(){ if(Date.now()-lastInput<3000||(window.SfhaPhotoEditor&&SfhaPhotoEditor.isOpen())||$('#sheet').classList.contains('on')) return scheduleRefresh(1500);
   await flushSaves(); const y=window.scrollY, open=$('#rail')&&$('#rail').classList.contains('open'); await loadAll(); route(); if(open&&$('#rail')) $('#rail').classList.add('open'); window.scrollTo(0,y); toast(T('Bijgewerkt via sync','Updated via sync')); }
 function syncDot(){ const d=$('#syncdot'); if(d&&window.SfhaSync){ const n=(SfhaSync.status().connections||[]).length; d.className='dot'+(n?' b-g':''); d.title=n+' '+T('verbonden','connected'); } }
 function toast(msg){ let t=$('#toast'); if(!t){ t=document.createElement('div'); t.id='toast'; t.className='noprint'; document.body.appendChild(t); } t.textContent=msg; t.classList.add('on'); clearTimeout(toast.t); toast.t=setTimeout(()=>t.classList.remove('on'),2200); }
@@ -2099,53 +2084,18 @@ async function addPhoto(file,taskId,evalId){ const bmp=await loadBitmap(file), c
   const p={id:uid(),taskId,evalId:evalId||null,caption:'',thumb:scaled(c,320).toDataURL('image/jpeg',.8),w:c.width,h:c.height,ann:[],scale:null,created:Date.now()};
   await Store.putBlobs(p,{full,base:full}); S.photos.push(p); await Store.put('photos',p); return p; }
 
-/* ---- photo editor: arrow, angle, ruler, text, blur (burned in) ---- */
-const ED={};
+/* ---- photo editor: shared ToolDeck/photo-editor.v1.js (arrow, circle, angle, measure, text, blur) ---- */
+const EDITOR_URL='https://weirders.github.io/ToolDeck/photo-editor.v1.js';
 async function openEditor(photoId,onClose){ const p=S.photos.find(x=>x.id===photoId); if(!p) return; const bl=await Store.getBlobs(p); if(!bl){ toast(T('Deze foto is nog niet gesynchroniseerd naar dit apparaat.','This photo has not been synced to this device yet.')); return; }
-  const base=scaled(await loadBitmap(bl.base||bl.full),4000); Object.assign(ED,{p,base,ann:JSON.parse(JSON.stringify(p.ann||[])),scale:p.scale,tool:'arrow',pts:[],drag:null,undo:[],dirty:false,onClose});
-  const tools=[['arrow',T('Pijl','Arrow')],['angle',T('Hoek','Angle')],['ruler',T('Maat','Measure')],['text',T('Tekst','Text')],['blur',T('Vervaag','Blur')]];
-  $('#editor').innerHTML=`<div class="top"><button id="edx">${T('Sluit','Close')}</button><button id="eddel">${T('Verwijder','Delete')}</button><span style="flex:1"></span><button id="edsave" style="background:#F2C200;color:#111;border-color:#F2C200">${T('Bewaar','Save')}</button></div>
-    <div class="top" style="padding-top:0"><input class="cap" id="edcap" type="text" placeholder="${T('Bijschrift voor het rapport','Caption for the report')}" value="${esc(p.caption)}"></div>
-    <div class="stage"><canvas id="edc"></canvas><div class="ask" id="edask"><input type="text" id="edin"><button id="edok">OK</button></div><div class="hint" id="edhint"></div></div>
-    <div class="tools">${tools.map(([k,l])=>`<button data-tool="${k}" aria-pressed="${k==='arrow'}">${l}</button>`).join('')}<button id="edundo">${T('Herstel','Undo')}</button></div>`;
-  $('#editor').classList.add('on'); const cv=$('#edc'); cv.width=base.width; cv.height=base.height; edHint(); edDraw();
-  const pt=ev=>{ const r=cv.getBoundingClientRect(); return {x:(ev.clientX-r.left)*cv.width/r.width,y:(ev.clientY-r.top)*cv.height/r.height}; };
-  cv.onpointerdown=ev=>{ ev.preventDefault(); if($('#edask').classList.contains('on')) return; const q=pt(ev);
-    if(ED.tool==='angle'){ ED.pts.push(q); if(ED.pts.length===3){ ED.ann.push({t:'angle',p:ED.pts}); ED.undo.push('ann'); ED.pts=[]; ED.dirty=true; } edHint(); edDraw(); }
-    else if(ED.tool==='text'){ edAsk(T('Tekst','Text'),'text',v=>{ if(v){ ED.ann.push({t:'text',a:q,s:v}); ED.undo.push('ann'); ED.dirty=true; edDraw(); } }); }
-    else { ED.drag={a:q,b:q}; cv.setPointerCapture(ev.pointerId); } };
-  cv.onpointermove=ev=>{ if(ED.drag){ ED.drag.b=pt(ev); edDraw(); } };
-  cv.onpointerup=()=>{ const d=ED.drag; ED.drag=null; if(!d) return; const len=Math.hypot(d.b.x-d.a.x,d.b.y-d.a.y); if(len<edU()*6){ edDraw(); return; }
-    if(ED.tool==='arrow'){ ED.ann.push({t:'arrow',a:d.a,b:d.b}); ED.undo.push('ann'); }
-    else if(ED.tool==='ruler'){ const add=()=>{ ED.ann.push({t:'ruler',a:d.a,b:d.b}); ED.undo.push('ann'); edHint(); edDraw(); };
-      if(!ED.scale) edAsk(T('Werkelijke lengte van deze lijn in cm (referentie)','Real length of this line in cm (reference)'),'number',v=>{ const n=num(v); if(n>0){ ED.scale=n/len; add(); } else edDraw(); }); else add(); }
-    else if(ED.tool==='blur'){ const x=Math.round(Math.min(d.a.x,d.b.x)),y=Math.round(Math.min(d.a.y,d.b.y)),w=Math.round(Math.abs(d.b.x-d.a.x)),h=Math.round(Math.abs(d.b.y-d.a.y)); if(w>4&&h>4){ const bx=base.getContext('2d'); ED.undo.push({x,y,img:bx.getImageData(x,y,w,h)});
-        const bs=Math.max(10,Math.max(w,h)/7), tw=Math.max(1,Math.ceil(w/bs)), th=Math.max(1,Math.ceil(h/bs)), tmp=document.createElement('canvas'); tmp.width=tw; tmp.height=th; const tc=tmp.getContext('2d'); tc.imageSmoothingEnabled=true; tc.drawImage(base,x,y,w,h,0,0,tw,th); bx.imageSmoothingEnabled=false; bx.drawImage(tmp,0,0,tw,th,x,y,w,h); bx.imageSmoothingEnabled=true; } }
-    ED.dirty=true; edDraw(); };
-  $('#editor .tools').onclick=ev=>{ const b=ev.target.closest('[data-tool]'); if(b){ ED.tool=b.dataset.tool; ED.pts=[]; $$('[data-tool]').forEach(x=>x.setAttribute('aria-pressed',x===b)); edHint(); edDraw(); } };
-  $('#edundo').onclick=()=>{ if(ED.pts.length){ ED.pts.pop(); } else { const u=ED.undo.pop(); if(u==='ann'){ ED.ann.pop(); if(!ED.ann.some(a=>a.t==='ruler')) ED.scale=null; } else if(u) base.getContext('2d').putImageData(u.img,u.x,u.y); } edHint(); edDraw(); };
-  $('#edx').onclick=()=>{ if(ED.dirty&&!confirm(T('Wijzigingen niet bewaren?','Discard changes?'))) return; edClose(); };
-  $('#eddel').onclick=async()=>{ if(!confirm(T('Deze foto verwijderen?','Delete this photo?'))) return; await Store.del('photos',p.id); await Store.delBlobs(p); S.photos=S.photos.filter(x=>x.id!==p.id); edClose(); };
-  $('#edsave').onclick=async()=>{ const out=document.createElement('canvas'); out.width=base.width; out.height=base.height; const c=out.getContext('2d'); c.drawImage(base,0,0); edPaint(c,ED.ann);
-    p.caption=$('#edcap').value; p.ann=ED.ann; p.scale=ED.scale; p.thumb=scaled(out,320).toDataURL('image/jpeg',.8); await Store.putBlobs(p,{full:await toBlob(out),base:await toBlob(base,.9)}); await Store.put('photos',p); edClose(); }; }
-function edClose(){ $('#editor').classList.remove('on'); $('#editor').innerHTML=''; const f=ED.onClose; ED.base=null; if(f) f(); }
-function edAsk(label,type,cb){ const a=$('#edask'), i=$('#edin'); i.type=type; i.value=''; i.placeholder=label; if(type==='number') i.inputMode='decimal'; a.classList.add('on'); i.focus();
-  const done=()=>{ a.classList.remove('on'); cb(i.value.trim()); }; $('#edok').onclick=done; i.onkeydown=e=>{ if(e.key==='Enter') done(); }; }
-function edHint(){ const h={arrow:T('Sleep om een pijl te tekenen','Drag to draw an arrow'),angle:[T('Tik het eerste punt (bv. schouder)','Tap the first point (e.g. shoulder)'),T('Tik het draaipunt (bv. elleboog)','Tap the vertex (e.g. elbow)'),T('Tik het derde punt (bv. pols)','Tap the third point (e.g. wrist)')][ED.pts.length],ruler:ED.scale?T('Sleep om een afstand te meten','Drag to measure a distance'):T('Sleep eerst over een bekende lengte als referentie','First drag along a known length as reference'),text:T('Tik waar de tekst moet komen','Tap where the text should go'),blur:T('Sleep over gezichten of naamkaartjes; dit wordt in de foto gebrand','Drag over faces or name tags; this is burned into the photo')}[ED.tool]; $('#edhint').textContent=h+(ED.tool==='angle'||ED.tool==='ruler'?T(' — alleen betrouwbaar bij een foto haaks op het bewegingsvlak',' — only reliable when shot square to the plane of movement'):''); }
-const edU=()=>Math.max(ED.base.width,ED.base.height)/420;
-function edDraw(){ const cv=$('#edc'); if(!cv) return; const c=cv.getContext('2d'); c.drawImage(ED.base,0,0); const tmp=[...ED.ann]; const d=ED.drag;
-  if(d){ if(ED.tool==='blur'){ edPaint(c,tmp); c.save(); c.setLineDash([edU()*3,edU()*3]); c.lineWidth=edU(); c.strokeStyle='#F2C200'; c.strokeRect(d.a.x,d.a.y,d.b.x-d.a.x,d.b.y-d.a.y); c.restore(); return; } tmp.push({t:ED.tool,a:d.a,b:d.b}); }
-  edPaint(c,tmp); if(ED.pts.length){ c.fillStyle='#F2C200'; ED.pts.forEach(q=>{ c.beginPath(); c.arc(q.x,q.y,edU()*2.5,0,7); c.fill(); }); } }
-function edPaint(c,anns){ const u=edU(), Y='#F2C200', K='rgba(10,16,20,.85)'; c.lineCap='round'; c.lineJoin='round';
-  const line=(a,b)=>{ c.strokeStyle=K; c.lineWidth=u*3.2; c.beginPath(); c.moveTo(a.x,a.y); c.lineTo(b.x,b.y); c.stroke(); c.strokeStyle=Y; c.lineWidth=u*1.6; c.beginPath(); c.moveTo(a.x,a.y); c.lineTo(b.x,b.y); c.stroke(); };
-  const label=(s,x,y)=>{ c.font=`600 ${u*9}px system-ui,sans-serif`; const w=c.measureText(s).width+u*8,h=u*14; x=Math.min(Math.max(x-w/2,2),c.canvas.width-w-2); y=Math.min(Math.max(y-h/2,2),c.canvas.height-h-2); c.fillStyle=K; c.beginPath(); c.roundRect?c.roundRect(x,y,w,h,u*3):c.rect(x,y,w,h); c.fill(); c.fillStyle=Y; c.textBaseline='middle'; c.fillText(s,x+u*4,y+h/2+u*.5); };
-  for(const a of anns){
-    if(a.t==='arrow'){ const ang=Math.atan2(a.b.y-a.a.y,a.b.x-a.a.x), hl=u*9; line(a.a,a.b); line(a.b,{x:a.b.x-hl*Math.cos(ang-.45),y:a.b.y-hl*Math.sin(ang-.45)}); line(a.b,{x:a.b.x-hl*Math.cos(ang+.45),y:a.b.y-hl*Math.sin(ang+.45)}); }
-    else if(a.t==='ruler'){ const ang=Math.atan2(a.b.y-a.a.y,a.b.x-a.a.x)+Math.PI/2, k=u*4, tick=q=>line({x:q.x-k*Math.cos(ang),y:q.y-k*Math.sin(ang)},{x:q.x+k*Math.cos(ang),y:q.y+k*Math.sin(ang)}); line(a.a,a.b); tick(a.a); tick(a.b);
-      const px=Math.hypot(a.b.x-a.a.x,a.b.y-a.a.y); if(ED.scale||a.cm) label(fmtN(Math.round((a.cm||px*ED.scale)))+' cm',(a.a.x+a.b.x)/2,(a.a.y+a.b.y)/2-u*10); }
-    else if(a.t==='angle'){ const [p1,v,p2]=a.p; line(v,p1); line(v,p2); const a1=Math.atan2(p1.y-v.y,p1.x-v.x), a2=Math.atan2(p2.y-v.y,p2.x-v.x); let dlt=a2-a1; while(dlt>Math.PI)dlt-=2*Math.PI; while(dlt<-Math.PI)dlt+=2*Math.PI;
-      const rad=Math.min(u*22,Math.hypot(p1.x-v.x,p1.y-v.y)*.5,Math.hypot(p2.x-v.x,p2.y-v.y)*.5); c.strokeStyle=Y; c.lineWidth=u*1.2; c.beginPath(); c.arc(v.x,v.y,rad,a1,a2,dlt<0); c.stroke(); const mid=a1+dlt/2; label(Math.round(Math.abs(dlt)*180/Math.PI)+'°',v.x+Math.cos(mid)*(rad+u*14),v.y+Math.sin(mid)*(rad+u*14)); }
-    else if(a.t==='text'){ label(a.s,a.a.x,a.a.y); } } }
+  if(!window.SfhaPhotoEditor) await loadScript(EDITOR_URL,6000,()=>!!window.SfhaPhotoEditor); if(!window.SfhaPhotoEditor){ toast(T('Foto-editor niet beschikbaar. Open ErgoFlow één keer online.','Photo editor unavailable. Open ErgoFlow online once.')); return; }
+  const sq=T(' — alleen betrouwbaar bij een foto haaks op het bewegingsvlak',' — only reliable when shot square to the plane of movement');
+  SfhaPhotoEditor.open({src:bl.base||bl.full,ann:p.ann,scale:p.scale,lang:LANG,tools:['arrow','circle','angle','ruler','text','blur'],fmtNum:fmtN,
+    caption:p.caption||'',captionPlaceholder:T('Bijschrift voor het rapport','Caption for the report'),
+    hint:(tool,{step,hasScale})=>tool==='angle'?[T('Tik het eerste punt (bv. schouder)','Tap the first point (e.g. shoulder)'),T('Tik het draaipunt (bv. elleboog)','Tap the vertex (e.g. elbow)'),T('Tik het derde punt (bv. pols)','Tap the third point (e.g. wrist)')][step]+sq
+      :tool==='ruler'?(hasScale?T('Sleep om een afstand te meten','Drag to measure a distance'):T('Sleep eerst over een bekende lengte als referentie','First drag along a known length as reference'))+sq:null,
+    onSave:async r=>{ p.caption=r.caption; p.ann=r.ann; p.scale=r.scale; p.thumb=r.thumb; p.w=r.width; p.h=r.height; await Store.putBlobs(p,{full:r.full,base:r.base}); await Store.put('photos',p); },
+    onDelete:async()=>{ await Store.del('photos',p.id); await Store.delBlobs(p); S.photos=S.photos.filter(x=>x.id!==p.id); },
+    onClose}); }
 
 /* ---- report ---- */
 let RPT={full:true}, rptUrls=[];
