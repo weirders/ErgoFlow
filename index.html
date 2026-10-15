@@ -162,6 +162,14 @@ select{appearance:none;padding-right:30px;background-image:url("data:image/svg+x
  .pagebreak{break-before:page}
 }
 @media(prefers-reduced-motion:no-preference){.rail .more{animation:up .16s ease-out}@keyframes up{from{opacity:0;transform:translateY(6px)}}}
+/* ---- Tool family (ToolDeck/STYLE.md): shared UI font, control shape and focus ring. Colours stay per app. ---- */
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+button,input,select,textarea{font-family:inherit}
+button:focus-visible,a:focus-visible,select:focus-visible,[role=menuitem]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* title mark: same colour as this app's card in ToolDeck */
+.bar > h1:first-child{font-size:15px;font-weight:700}
+.bar > h1:first-child::before{content:"";display:inline-block;width:4px;height:1.05em;border-radius:2px;margin-right:8px;vertical-align:-.15em;background:#d2a8ff}
+/* ---- end tool family ---- */
 </style>
 </head>
 <body>
