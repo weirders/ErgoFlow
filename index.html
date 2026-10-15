@@ -1433,7 +1433,7 @@ CHOOSE.push=['Twijfel? Begin met KIM-PP. Wil je weten hoe zwaar de kar mag zijn,
   add('lift',['lmlift','carry','es_lift']); add('push',['liberty','es_push']); add('hand',['rsi','es_rep']); add('care',['ptai','mapo','es_care']); add('stand',['es_stand','es_sit']); add('kneel',['es_kneel']); add('screen',['rab','es_screen']); add('fatigue',['es_fatigue']); add('posture',['es_post']); })();
 
 /* ===================== ErgoFlow app ===================== */
-const VERSION='0.7.2';
+const VERSION='0.7.3';
 let LANG=(()=>{try{return localStorage.getItem('ergoflow.lang')}catch(e){return null}})()||'nl';
 const T=(nl,en)=>LANG==='nl'?nl:en, tr=x=>Array.isArray(x)?x[LANG==='nl'?0:1]:(x??'');
 tr_=T;
@@ -1449,6 +1449,8 @@ const ico=n=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]}</
 /* ---- Storage: sfha-sync v1 (shared IndexedDB + P2P, see SYNC-CONTRACT) with a local fallback ----
    sync mode : records live in SfhaSync under app "ergoflow", collections tasks / evals / photos; photo files are assets,
                referenced from the photo payload as full:{hash} and base:{hash}. SfhaSync is the single source of truth.
+               base = the untouched original (WebP for new photos), never overwritten; ann/scale = every edit step as
+               data, blur included (photo editor blurData), so any device can undo or erase any step.
    local mode: only when sync.v1.js cannot be loaded. Writes go to the old "ergoflow" IndexedDB flagged _pending and are
                pushed into SfhaSync on the next start where the sync layer is available. */
 const APP='ergoflow', SYNC_URL='https://weirders.github.io/ToolDeck/sync.v1.js';
@@ -1473,7 +1475,7 @@ const Store={ mode:'local', own:new Map(),
   async del(c,id){ if(this.mode==='sync'){ this.mark(id); const r=await SfhaSync.del(APP,c,id); if(!r) this.mark(id,-1); } else await Local.put(c,{id,_deleted:true,_pending:true}); },
   async putBlobs(p,b){ if(this.mode==='sync'){ p.full={hash:await SfhaSync.putAsset(b.full)}; p.base=(b.base&&b.base!==b.full)?{hash:await SfhaSync.putAsset(b.base)}:p.full; } else await Local.put('blobs',{id:p.id,full:b.full,base:b.base||b.full}); },
   async getBlobs(p){ if(this.mode!=='sync') return Local.get('blobs',p.id); if(!p.full||!p.full.hash) return null; const full=await SfhaSync.getAsset(p.full.hash); if(!full) return null;
-    const base=(p.base&&p.base.hash!==p.full.hash)?await SfhaSync.getAsset(p.base.hash):null; return {full,base:base||full}; },
+    const sep=p.base&&p.base.hash&&p.base.hash!==p.full.hash, base=sep?await SfhaSync.getAsset(p.base.hash):null; return {full,base:base||full,baseMissing:!!sep&&!base}; },
   async delBlobs(p){ if(this.mode!=='sync') await Local.del('blobs',p.id); } };
 /* one-time copy of the pre-sync storage, with the records' old timestamps so real edits elsewhere win */
 async function migrateOld(){ if(!Local.db) return; await SfhaSync.migrate('v1',async()=>{ const iso=ms=>new Date(ms||0).toISOString();
@@ -2080,20 +2082,21 @@ async function loadBitmap(blob){ if(window.createImageBitmap){ try{ return await
   return new Promise((res,rej)=>{ const im=new Image(), u=URL.createObjectURL(blob); im.onload=()=>{URL.revokeObjectURL(u);res(im);}; im.onerror=rej; im.src=u; }); }
 const toBlob=(c,q=.86)=>new Promise(r=>c.toBlob(r,'image/jpeg',q));
 function scaled(src,max){ const w=src.width,h=src.height,k=Math.min(1,max/Math.max(w,h)),c=document.createElement('canvas'); c.width=Math.round(w*k); c.height=Math.round(h*k); c.getContext('2d').drawImage(src,0,0,c.width,c.height); return c; }
-async function addPhoto(file,taskId,evalId){ const bmp=await loadBitmap(file), c=scaled(bmp,1600), full=await toBlob(c);
+const toWebp=c=>new Promise(r=>c.toBlob(b=>r(b&&b.type==='image/webp'?b:null),'image/webp',.9)).then(b=>b||toBlob(c,.92));
+async function addPhoto(file,taskId,evalId){ const bmp=await loadBitmap(file), c=scaled(bmp,1600), full=await toBlob(c), orig=await toWebp(scaled(bmp,3000));
   const p={id:uid(),taskId,evalId:evalId||null,caption:'',thumb:scaled(c,320).toDataURL('image/jpeg',.8),w:c.width,h:c.height,ann:[],scale:null,created:Date.now()};
-  await Store.putBlobs(p,{full,base:full}); S.photos.push(p); await Store.put('photos',p); return p; }
+  await Store.putBlobs(p,{full,base:orig}); S.photos.push(p); await Store.put('photos',p); return p; }
 
-/* ---- photo editor: shared ToolDeck/photo-editor.v1.js (arrow, circle, angle, measure, text, blur) ---- */
+/* ---- photo editor: shared ToolDeck/photo-editor.v1.js (arrow, circle, angle, measure, text, blur, erase) — blurData: every step stays data over the original ---- */
 const EDITOR_URL='https://weirders.github.io/ToolDeck/photo-editor.v1.js';
-async function openEditor(photoId,onClose){ const p=S.photos.find(x=>x.id===photoId); if(!p) return; const bl=await Store.getBlobs(p); if(!bl){ toast(T('Deze foto is nog niet gesynchroniseerd naar dit apparaat.','This photo has not been synced to this device yet.')); return; }
+async function openEditor(photoId,onClose){ const p=S.photos.find(x=>x.id===photoId); if(!p) return; const bl=await Store.getBlobs(p); if(!bl||bl.baseMissing){ toast(T('Deze foto is nog niet gesynchroniseerd naar dit apparaat.','This photo has not been synced to this device yet.')); return; }
   if(!window.SfhaPhotoEditor) await loadScript(EDITOR_URL,6000,()=>!!window.SfhaPhotoEditor); if(!window.SfhaPhotoEditor){ toast(T('Foto-editor niet beschikbaar. Open ErgoFlow één keer online.','Photo editor unavailable. Open ErgoFlow online once.')); return; }
   const sq=T(' — alleen betrouwbaar bij een foto haaks op het bewegingsvlak',' — only reliable when shot square to the plane of movement');
-  SfhaPhotoEditor.open({src:bl.base||bl.full,ann:p.ann,scale:p.scale,lang:LANG,tools:['arrow','circle','angle','ruler','text','blur'],fmtNum:fmtN,
+  SfhaPhotoEditor.open({src:bl.base||bl.full,blurData:true,quality:.82,ann:p.ann,scale:p.scale,lang:LANG,tools:['arrow','circle','angle','ruler','text','blur','erase'],fmtNum:fmtN,
     caption:p.caption||'',captionPlaceholder:T('Bijschrift voor het rapport','Caption for the report'),
     hint:(tool,{step,hasScale})=>tool==='angle'?[T('Tik het eerste punt (bv. schouder)','Tap the first point (e.g. shoulder)'),T('Tik het draaipunt (bv. elleboog)','Tap the vertex (e.g. elbow)'),T('Tik het derde punt (bv. pols)','Tap the third point (e.g. wrist)')][step]+sq
       :tool==='ruler'?(hasScale?T('Sleep om een afstand te meten','Drag to measure a distance'):T('Sleep eerst over een bekende lengte als referentie','First drag along a known length as reference'))+sq:null,
-    onSave:async r=>{ p.caption=r.caption; p.ann=r.ann; p.scale=r.scale; p.thumb=r.thumb; p.w=r.width; p.h=r.height; await Store.putBlobs(p,{full:r.full,base:r.base}); await Store.put('photos',p); },
+    onSave:async r=>{ p.caption=r.caption; p.ann=r.ann; p.scale=r.scale; p.thumb=r.thumb; p.w=r.width; p.h=r.height; await Store.putBlobs(p,{full:r.full,base:bl.base||bl.full}); await Store.put('photos',p); },
     onDelete:async()=>{ await Store.del('photos',p.id); await Store.delBlobs(p); S.photos=S.photos.filter(x=>x.id!==p.id); },
     onClose}); }
 
